@@ -138,6 +138,43 @@ uint16_t  command__check_response_msg(volatile ER_Msg * _msg) {
             if ((* _msg).body_size != 4) errors |= MSG__BAD_BODY;
             break;
         }
+        case ER_TACTILE_PCB1_GET_MEDIAN: { // Set position setpoint
+            if ((*_msg).body_size != 9 * 2)
+                errors |= MSG__BAD_BODY;
+            break;
+        }
+
+        case ER_TACTILE_PCB2_GET_MEDIAN: { // Set position setpoint
+            if ((*_msg).body_size != 9 * 2)
+                errors |= MSG__BAD_BODY;
+            break;
+        }
+
+        case ER_TACTILE_FINGER1_GET_MEDIAN: { // Set position setpoint
+            if ((*_msg).body_size != 18 * 2)
+                errors |= MSG__BAD_BODY;
+            break;
+        }
+        case ER_TACTILE_PCB3_GET_MEDIAN: { // Set position setpoint
+            if ((*_msg).body_size != 9 * 2)
+                errors |= MSG__BAD_BODY;
+            break;
+        }
+        case ER_TACTILE_PCB4_GET_MEDIAN: { // Set position setpoint
+            if ((*_msg).body_size != 9 * 2)
+                errors |= MSG__BAD_BODY;
+            break;
+        }
+        case ER_TACTILE_FINGER2_GET_MEDIAN: { // Set position setpoint
+            if ((*_msg).body_size != 18 * 2)
+                errors |= MSG__BAD_BODY;
+            break;
+        }
+        case ER_TACTILE_GRIPPER1_GET_MEDIAN: { // Set position setpoint
+            if ((*_msg).body_size != 36 * 2)
+                errors |= MSG__BAD_BODY;
+            break;
+        }
 
         default: {
             errors |= MSG__BAD_REGISTER;
