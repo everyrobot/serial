@@ -1,0 +1,427 @@
+#include "serial_example/serial_example.h"
+
+namespace er_serial {
+
+Serial::Serial(ros::NodeHandle &nh, uint16_t source_id, uint16_t node_id, std::string serial_port)
+    : nh_(nh)
+{
+    serial_read_buffer.resize(32);
+    ti_read_buffer.resize(13);
+    ros_loop(source_id, node_id, serial_port);
+    //write_sub = nh_.subscribe("write_", 1000, &Serial::write_callback, this);
+    //read_pub = nh_.advertise<std_msgs::String>("read", 1000);
+    //write_pub_str = nh_.advertise<std_msgs::String>("write_", 1000);
+}
+
+Serial::~Serial() {}
+
+bool Serial::serial_init(std::string serial_port)
+{
+    serial_port_fd = open(serial_port.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
+    struct termios tty;
+    struct termios tty_old;
+    memset(&tty, 0, sizeof tty);
+
+    /* Error Handling */
+    if (tcgetattr(serial_port_fd, &tty) != 0) {
+        std::cout << "Error " << errno << " from tcgetattr: " << strerror(errno) << std::endl;
+        return false;
+    }
+
+    /* Save old tty parameters */
+    tty_old = tty;
+
+    /* Set Baud Rate */
+    cfsetospeed(&tty, (speed_t) B115200);
+    cfsetispeed(&tty, (speed_t) B115200);
+
+    /* Setting other Port Stuff */
+    tty.c_cflag &= ~PARENB; // Make 8n1
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+
+    tty.c_cflag &= ~CRTSCTS;       // no flow control
+    tty.c_cc[VMIN] = 1;            // read doesn't block
+    tty.c_cc[VTIME] = 0;           //5         // 0.5 seconds read timeout
+    tty.c_cflag |= CREAD | CLOCAL; // turn on READ & ignore ctrl lines
+
+    /* Make raw */
+    cfmakeraw(&tty);
+
+    /* Flush Port, then applies attributes */
+    tcflush(serial_port_fd, TCIFLUSH);
+    if (tcsetattr(serial_port_fd, TCSANOW, &tty) != 0) {
+        std::cout << "Error " << errno << " from tcsetattr" << std::endl;
+        return false;
+    }
+    return true;
+}
+
+int Serial ::serial_write(const std::string &data)
+{
+    no_written_bytes = write(serial_port_fd, data.c_str(), data.size());
+    return no_written_bytes;
+}
+
+void Serial::check_response_type(volatile ER_Msg *_msg)
+{
+    //ROS_INFO("check_response_type:%d ", (*_msg).register_id);
+    switch ((*_msg).register_id) {
+    case ER_REG_PING:              // PING message
+    case ER_REG_SET_POSITION_SP: { // Set position setpoint
+        if ((*_msg).body_size == 0)
+            ROS_INFO("Position is set ");
+        break;
+    }
+
+    case ER_REG_GET_POSITION: { // Set position setpoint
+        if ((*_msg).body_size == 4) {
+            current_position = msg__get_float_from_body(&gMsgResponse, 0);
+            ROS_INFO("current position is :%f ", current_position);
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i <= (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+
+    case ER_TACTILE_PCB2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+
+    case ER_TACTILE_FINGER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB3_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB4_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_FINGER2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_GRIPPER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0;
+                 i < (NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2);
+                 i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    default: {}
+    }
+}
+
+void Serial ::serial_read()
+{
+    do {
+        no_read_bytes = read(serial_port_fd, &serial_read_buffer[0], 32);
+        //ROS_INFO(" serial_read: no_read_bytes is :%d", no_read_bytes);
+        for (int i = 0; i < no_read_bytes; i += 1) {
+            ti_read_buffer[i] = static_cast<uint16_t>(serial_read_buffer[i]);
+            //ROS_INFO(" serial_read: read_byteis :%d", ti_read_buffer[i]);
+            buffer__add_to_buffer(_RX_SCI_buf,
+                                  &_RX_SCI_ptr,
+                                  &__flag_buffer_rx_is_changed,
+                                  ti_read_buffer[i]);
+        }
+    } while (!buffer__analyse_buffer(_RX_SCI_buf,
+                                     &_RX_SCI_ptr,
+                                     &__flag_buffer_rx_is_changed,
+                                     &_node_id,
+                                     &gMsgResponse));
+
+    if (command__check_msg_flags(&gMsgResponse) == 0
+        && command__check_response_msg(&gMsgResponse) == 0) {
+        check_response_type(&gMsgResponse);
+    }
+}
+
+std::string Serial::get_pos_cmd(uint16_t source_id, uint16_t node_id)
+{
+    ER_Msg get_pos_cmd = command__create_msg_get_position(source_id, node_id);
+    get_pos_cmd_len = msg__get_length(&get_pos_cmd);
+    get_pos_byte_array = msg__to_byte_array(&get_pos_cmd);
+    ////std::string str_hex_set_pos = hexStr((unsigned char *) get_pos_byte_array, get_pos_cmd_len);
+    get_pos_byte_str.assign(get_pos_byte_array, get_pos_cmd_len);
+    return get_pos_byte_str;
+}
+std::string Serial::set_pos_cmd(uint16_t source_id, uint16_t node_id, float position)
+{
+    ER_Msg set_pos_cmd = command__create_msg_set_position(source_id, node_id, position);
+    set_pos_cmd_len = msg__get_length(&set_pos_cmd);
+    set_pos_byte_array = msg__to_byte_array(&set_pos_cmd);
+    //std::string str_hex_set_pos = hexStr((unsigned char *) set_pos_byte_array, set_pos_cmd_len);
+    set_pos_byte_str.assign(set_pos_byte_array, set_pos_cmd_len);
+    return set_pos_byte_str;
+}
+std::string Serial::ping_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg ping_cmd = command__create_msg_ping(source_id, node_id);
+    // Getting Lengths of TI Command Message
+    ping_cmd_len = msg__get_length(&ping_cmd);
+    // Creating byte arrays from TI Command Message
+    ping_byte_array = msg__to_byte_array(&ping_cmd);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_ping = hexStr((unsigned char *) byte_array_ping, msg_ping_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_ping);
+    // Creating data strings from byte arrays for ROS compatibility
+    ping_byte_str.assign(ping_byte_array, ping_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return ping_byte_str;
+}
+
+std::string Serial::tactile_pcb1_get_median_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg tactile_pcb1_get_median_cmd = command__create_msg_tactile_pcb1_get_median(source_id,
+                                                                                     node_id);
+    // Getting Lengths of TI Command Message
+    pcb1_cmd_len = msg__get_length(&tactile_pcb1_get_median_cmd);
+    // Creating byte arrays from TI Command Message
+    pcb1_byte_array = msg__to_byte_array(&tactile_pcb1_get_median_cmd);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_pcb1 = hexStr((unsigned char *) pcb1_byte_array, pcb1_cmd_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_pcb1);
+    // Creating data strings from byte arrays for ROS compatibility
+    pcb1_byte_str.assign(pcb1_byte_array, pcb1_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return pcb1_byte_str;
+}
+
+std::string Serial::tactile_pcb2_get_median_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg tactile_pcb2_get_median = command__create_msg_tactile_pcb2_get_median(source_id, node_id);
+    // Getting Lengths of TI Command Message
+    pcb2_cmd_len = msg__get_length(&tactile_pcb2_get_median);
+    // Creating byte arrays from TI Command Message
+    pcb2_byte_array = msg__to_byte_array(&tactile_pcb2_get_median);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_pcb2 = hexStr((unsigned char *) pcb2_byte_array, pcb2_cmd_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_pcb2);
+    // Creating data strings from byte arrays for ROS compatibility
+    pcb2_byte_str.assign(pcb2_byte_array, pcb2_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return pcb2_byte_str;
+}
+
+std::string Serial::tactile_finger1_get_median_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg tactile_finger1_get_median_cmd = command__create_msg_tactile_finger1_get_median(source_id,
+                                                                                           node_id);
+    // Getting Lengths of TI Command Message
+    fnger1_cmd_len = msg__get_length(&tactile_finger1_get_median_cmd);
+    // Creating byte arrays from TI Command Message
+    finger1_byte_array = msg__to_byte_array(&tactile_finger1_get_median_cmd);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_ping = hexStr((unsigned char *) byte_array_ping, msg_ping_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_ping);
+    // Creating data strings from byte arrays for ROS compatibility
+    finger1_byte_str.assign(finger1_byte_array, fnger1_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return finger1_byte_str;
+}
+
+std::string Serial::tactile_pcb3_get_median_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg tactile_pcb3_get_median_cmd = command__create_msg_tactile_pcb3_get_median(source_id,
+                                                                                     node_id);
+    // Getting Lengths of TI Command Message
+    pcb3_cmd_len = msg__get_length(&tactile_pcb3_get_median_cmd);
+    // Creating byte arrays from TI Command Message
+    pcb3_byte_array = msg__to_byte_array(&tactile_pcb3_get_median_cmd);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_ping = hexStr((unsigned char *) byte_array_ping, msg_ping_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_ping);
+    // Creating data strings from byte arrays for ROS compatibility
+    pcb3_byte_str.assign(pcb3_byte_array, pcb3_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return pcb3_byte_str;
+}
+
+std::string Serial::tactile_pcb4_get_median_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg tactile_pcb4_get_median_cmd = command__create_msg_tactile_pcb4_get_median(source_id,
+                                                                                     node_id);
+    // Getting Lengths of TI Command Message
+    pcb4_cmd_len = msg__get_length(&tactile_pcb4_get_median_cmd);
+    // Creating byte arrays from TI Command Message
+    pcb4_byte_array = msg__to_byte_array(&tactile_pcb4_get_median_cmd);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_ping = hexStr((unsigned char *) byte_array_ping, msg_ping_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_ping);
+    // Creating data strings from byte arrays for ROS compatibility
+    pcb4_byte_str.assign(pcb4_byte_array, pcb4_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return pcb4_byte_str;
+}
+
+std::string Serial::tactile_finger2_get_median_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg tactile_finger2_get_median_cmd = command__create_msg_tactile_finger2_get_median(source_id,
+                                                                                           node_id);
+    // Getting Lengths of TI Command Message
+    fnger2_cmd_len = msg__get_length(&tactile_finger2_get_median_cmd);
+    // Creating byte arrays from TI Command Message
+    finger2_byte_array = msg__to_byte_array(&tactile_finger2_get_median_cmd);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_ping = hexStr((unsigned char *) byte_array_ping, msg_ping_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_ping);
+    // Creating data strings from byte arrays for ROS compatibility
+    finger2_byte_str.assign(finger2_byte_array, fnger2_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return finger2_byte_str;
+}
+
+std::string Serial::tactile_gripper1_get_median_cmd(uint16_t source_id, uint16_t node_id)
+{
+    // Creating TI Command Message
+    ER_Msg tactile_gripper1_get_median_cmd
+        = command__create_msg_tactile_gripper1_get_median(source_id, node_id);
+    // Getting Lengths of TI Command Message
+    gripper1_cmd_len = msg__get_length(&tactile_gripper1_get_median_cmd);
+    // Creating byte arrays from TI Command Message
+    gripper1_byte_array = msg__to_byte_array(&tactile_gripper1_get_median_cmd);
+    // (Debugging) Creating hex strings from byte array
+    //std::string str_hex_ping = hexStr((unsigned char *) byte_array_ping, msg_ping_len);
+    // (Display) Show hex strings of TI Commands Message
+    //ROS_INFO_STREAM("hexstring write " << str_hex_ping);
+    // Creating data strings from byte arrays for ROS compatibility
+    griper1_byte_str.assign(gripper1_byte_array, gripper1_cmd_len);
+    // Passing data strings of TI Command Message into ROS Msg
+    //str_ros_ping.data = str_byte_ping;
+    return griper1_byte_str;
+}
+
+void Serial::ros_loop(uint16_t source_id, uint16_t node_id, std::string serial_port)
+{
+    ros::Rate loop_rate(100);
+    if (serial_init(serial_port)) {
+        while (ros::ok()) {
+            serial_write(get_pos_cmd(source_id, node_id));
+            serial_read();
+            serial_write(tactile_pcb1_get_median_cmd(source_id, node_id));
+            serial_read();
+
+            serial_write(tactile_pcb2_get_median_cmd(source_id, node_id));
+            serial_read();
+            serial_write(tactile_pcb3_get_median_cmd(source_id, node_id));
+            serial_read();
+            serial_write(tactile_pcb4_get_median_cmd(source_id, node_id));
+            serial_read();
+            serial_write(tactile_finger1_get_median_cmd(source_id, node_id));
+            serial_read();
+            serial_write(tactile_finger2_get_median_cmd(source_id, node_id));
+            serial_read();
+            serial_write(tactile_gripper1_get_median_cmd(source_id, node_id));
+            serial_read();
+
+            serial_write(set_pos_cmd(source_id, node_id, desired_pose));
+            serial_read();
+            desired_pose += 0.05;
+            //if (desired_pose > 120.0)
+            //desired_pose = 0.0;
+            ros::Duration(0.005).sleep();
+
+            loop_rate.sleep();
+        }
+    }
+}
+std::string Serial::hexStr(unsigned char *data, int len)
+{
+    constexpr char hexmap[]
+        = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    std::string s(len * 2, ' ');
+    for (int i = 0; i < len; ++i) {
+        s[2 * i] = hexmap[(data[i] & 0xF0) >> 4];
+        s[2 * i + 1] = hexmap[data[i] & 0x0F];
+    }
+    return s;
+}
+
+void Serial::write_callback(const std_msgs::String::ConstPtr &msg) {}
+
+} // namespace er_serial

@@ -1,0 +1,7 @@
+<launch>
+  <arg name="com_port" default="/dev/ttyUSB0" />
+  <arg name="rate" default="1200" />
+  <node pkg="serial_example" type="serial_example" name="serial_example_node" output="screen">
+  	<param name="com_port" value="$(arg com_port)" />  <param name="rate" value="$(arg rate)" />	  	
+  </node>
+</launch>

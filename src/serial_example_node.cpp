@@ -1,74 +1,21 @@
-/***
- * This example expects the serial port has a loopback on it.
- *
- * Alternatively, you could use an Arduino:
- *
- * <pre>
- *  void setup() {
- *    Serial.begin(<insert your baudrate here>);
- *  }
- *
- *  void loop() {
- *    if (Serial.available()) {
- *      Serial.write(Serial.read());
- *    }
- *  }
- * </pre>
- */
+#include "serial_example/serial_example.h"
 
-#include <ros/ros.h>
-#include <serial/serial.h>
-#include <std_msgs/String.h>
-#include <std_msgs/Empty.h>
-
-serial::Serial ser;
-
-void write_callback(const std_msgs::String::ConstPtr& msg){
-    ROS_INFO_STREAM("Writing to serial port" << msg->data);
-    ser.write(msg->data);
-}
-
-int main (int argc, char** argv){
+int main(int argc, char **argv)
+{
     ros::init(argc, argv, "serial_example_node");
+
+    ros::AsyncSpinner spinner(4);
+    spinner.start();
+
     ros::NodeHandle nh;
 
-    ros::Subscriber write_sub = nh.subscribe("write", 1000, write_callback);
-    ros::Publisher read_pub = nh.advertise<std_msgs::String>("read", 1000);
+    uint16_t source_id = 1;
+    uint16_t node_id = 100;
+    std::string serial_port = "/dev/ttyUSB0";
 
-    try
-    {
-        ser.setPort("/dev/ttyACM0");
-        ser.setBaudrate(9600);
-        serial::Timeout to = serial::Timeout::simpleTimeout(1000);
-        ser.setTimeout(to);
-        ser.open();
-    }
-    catch (serial::IOException& e)
-    {
-        ROS_ERROR_STREAM("Unable to open port ");
-        return -1;
-    }
+    er_serial::Serial serial(nh, source_id, node_id, serial_port);
+    //ros::waitForShutdown();
 
-    if(ser.isOpen()){
-        ROS_INFO_STREAM("Serial Port initialized");
-    }else{
-        return -1;
-    }
-
-    ros::Rate loop_rate(5);
-    while(ros::ok()){
-
-        ros::spinOnce();
-
-        if(ser.available()){
-            ROS_INFO_STREAM("Reading from serial port");
-            std_msgs::String result;
-            result.data = ser.read(ser.available());
-            ROS_INFO_STREAM("Read: " << result.data);
-            read_pub.publish(result);
-        }
-        loop_rate.sleep();
-
-    }
+    //ROS_INFO("shutdown node");
+    return 0;
 }
-
