@@ -5,3 +5,16 @@ ROS side:
 1. Download serial-ros from here at master branch https://github.com/everyrobot/serial-ros
 2. Download er_ti_f28069m_drv8305 from here at er_drv_ros branch https://github.com/everyrobot/serial-ros/tree/er_drv_ros
 3. compile and rosrun serial_example serial_example_node for tactile_bldc_serial functioning
+
+RVIZ:
+#include "geometry_msgs/WrenchStamped.h"
+ros::Publisher tactile_force_pub;
+tactile_force_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_pcb1_median", 1000);
+geometry_msgs::WrenchStamped pcb1_msg;
+            pcb1_msg.header.stamp = ros::Time::now();
+            pcb1_msg.header.frame_id = "/map";
+            pcb1_msg.wrench.force.z = 0;
+            for (int i = 0; i < NO_OF_CHANNELS; i++)
+                pcb1_msg.wrench.force.z += tactile_serial_read[i] / 35;
+
+            tactile_force_pub.publish(pcb1_msg);
