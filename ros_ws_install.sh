@@ -5,7 +5,7 @@ mkdir src
 cd src 
 git clone https://github.com/everyrobot/serial-ros.git
 git clone --branch er_drv_ros https://github.com/everyrobot/serial-ros.git
-cd ../.. 
+cd ..
 catkin_make
 source devel/setup.bash
 gnome-terminal -x sh -c "roscore"
