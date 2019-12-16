@@ -6,13 +6,16 @@ extern "C" {
 #include "er_ti_f28069m_drv8305/er_msg.h"
 #include "er_ti_f28069m_drv8305/er_registers.h"
 }
+#include "geometry_msgs/WrenchStamped.h"
 #include <fcntl.h>
 #include <pthread.h>
 #include <ros/ros.h>
+#include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 #include <string>
 #include <termios.h>
 #include <time.h>
+
 namespace er_serial {
 volatile unsigned char _RX_SCI_buf[1024]; // buffer RX
 volatile uint16_t _RX_SCI_ptr = 0;
@@ -47,7 +50,7 @@ public:
 
     void ros_loop(uint16_t source_id, uint16_t node_id, std::string serial_port);
     std::string hexStr(unsigned char *data, int len);
-    void write_callback(const std_msgs::String::ConstPtr &msg);
+    void write_callback(const std_msgs::Float64::ConstPtr &msg);
 
 protected:
     int serial_port_fd;
@@ -79,8 +82,23 @@ protected:
 
     ros::NodeHandle nh_;
     ros::Subscriber write_sub;
+
     ros::Publisher read_pub;
+    std_msgs::Float64 get_pose_msg;
+
     ros::Publisher write_pub_str;
+
+    ros::Publisher tactile_force_pub;
+
+    //ros::Publisher array1_pub;
+    //ros::Publisher array2_pub;
+    //ros::Publisher array3_pub;
+    //ros::Publisher array4_pub;
+    //ros::Publisher array5_pub;
+    //ros::Publisher array6_pub;
+    //ros::Publisher array7_pub;
+    //ros::Publisher array8_pub;
+    //ros::Publisher array9_pub;
 };
 } // namespace er_serial
 #endif
