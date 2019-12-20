@@ -7,8 +7,9 @@ Serial::Serial(ros::NodeHandle &nh, uint16_t source_id, uint16_t node_id, std::s
 {
     serial_read_buffer.resize(32);
     ti_read_buffer.resize(13);
-    write_sub = nh_.subscribe("joint_set_pose", 1000, &Serial::write_callback, this);
+    write_sub = nh_.subscribe("joint_set_pose", 1000, &Serial::set_pose_callback, this);
     read_pub = nh_.advertise<std_msgs::Float64>("joint_get_pose", 1000);
+    pcb1_sensors_voltage_pub = nh_.advertise<std_msgs::Float64MultiArray>("sensors_voltage", 1000);
     ros_loop(source_id, node_id, serial_port);
 
     //write_pub_str = nh_.advertise<std_msgs::String>("write_", 1000);
@@ -88,14 +89,17 @@ void Serial::check_response_type(volatile ER_Msg *_msg)
     }
     case ER_TACTILE_PCB1_GET_MEDIAN: { // Set position setpoint
         tactile_serial_read.resize(NO_OF_CHANNELS);
+        pcb1_voltages_msg.data.clear();
         int j = 0;
         if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
             for (int i = 0; i <= (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
                 tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
-            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++) {
                 ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+                pcb1_voltages_msg.data.push_back(tactile_serial_read.at(i));
+            }
+            pcb1_sensors_voltage_pub.publish(pcb1_voltages_msg);
         }
-
         break;
     }
 
@@ -425,8 +429,8 @@ void Serial::ros_loop(uint16_t source_id, uint16_t node_id, std::string serial_p
             serial_write(get_pos_cmd(source_id, node_id));
             serial_read();
 
-            //serial_write(tactile_pcb1_get_median_cmd(source_id, node_id));
-            //serial_read();
+            serial_write(tactile_pcb1_get_median_cmd(source_id, node_id));
+            serial_read();
 
             //pcb1_msg.header.stamp = ros::Time::now();
 
@@ -490,6 +494,9 @@ void Serial::ros_loop(uint16_t source_id, uint16_t node_id, std::string serial_p
             //serial_write(tactile_gripper1_get_median_cmd(source_id, node_id));
             //serial_read();
             //
+            //serial_write(set_pos_cmd(1, 100, desired_pose));
+            //serial_read();
+            //desired_pose += 0.05;
 
             //if (desired_pose > 120.0)
             //desired_pose = 0.0;
@@ -511,12 +518,20 @@ std::string Serial::hexStr(unsigned char *data, int len)
     return s;
 }
 
-void Serial::write_callback(const std_msgs::Float64::ConstPtr &msg)
+void Serial::set_pose_callback(const std_msgs::Float64::ConstPtr &msg)
 {
     desired_pose = msg->data;
     serial_write(set_pos_cmd(1, 100, desired_pose));
     serial_read();
     //desired_pose += 0.05;
 }
+
+//void Serial::get_pose_callback(const std_msgs::Float64::ConstPtr &msg)
+//{
+//    double request = msg->data;
+//    serial_write(get_pos_cmd(1, 100));
+//    serial_read();
+//    //desired_pose += 0.05;
+//}
 
 } // namespace er_serial

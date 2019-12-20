@@ -11,6 +11,7 @@ extern "C" {
 #include <pthread.h>
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/String.h>
 #include <string>
 #include <termios.h>
@@ -50,7 +51,8 @@ public:
 
     void ros_loop(uint16_t source_id, uint16_t node_id, std::string serial_port);
     std::string hexStr(unsigned char *data, int len);
-    void write_callback(const std_msgs::Float64::ConstPtr &msg);
+    void set_pose_callback(const std_msgs::Float64::ConstPtr &msg);
+    // void get_pose_callback(const std_msgs::Float64::ConstPtr &msg);
 
 protected:
     int serial_port_fd;
@@ -85,10 +87,13 @@ protected:
 
     ros::Publisher read_pub;
     std_msgs::Float64 get_pose_msg;
+    std_msgs::Float64MultiArray pcb1_voltages_msg;
 
     ros::Publisher write_pub_str;
 
     ros::Publisher tactile_force_pub;
+
+    ros::Publisher pcb1_sensors_voltage_pub;
 
     //ros::Publisher array1_pub;
     //ros::Publisher array2_pub;
