@@ -25,7 +25,16 @@ ER_Msg      command__create_msg_set_position(uint16_t source_id, uint16_t node_i
 ER_Msg      command__create_msg_get_position(uint16_t source_id, uint16_t node_id);
 ER_Msg      command__create_msg_ping(uint16_t source_id, uint16_t node_id);
 
-uint16_t    command__check_msg_flags(volatile ER_Msg * _msg);
+// Tactile Module
+ER_Msg command__create_msg_tactile_pcb1_get_median(uint16_t source_id, uint16_t node_id);
+ER_Msg command__create_msg_tactile_pcb2_get_median(uint16_t source_id, uint16_t node_id);
+ER_Msg command__create_msg_tactile_finger1_get_median(uint16_t source_id, uint16_t node_id);
+ER_Msg command__create_msg_tactile_pcb3_get_median(uint16_t source_id, uint16_t node_id);
+ER_Msg command__create_msg_tactile_pcb4_get_median(uint16_t source_id, uint16_t node_id);
+ER_Msg command__create_msg_tactile_finger2_get_median(uint16_t source_id, uint16_t node_id);
+ER_Msg command__create_msg_tactile_gripper1_get_median(uint16_t source_id, uint16_t node_id);
+
+uint16_t command__check_msg_flags(volatile ER_Msg *_msg);
 uint16_t    command__check_response_msg(volatile ER_Msg * _msg);
 
 #endif

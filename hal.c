@@ -533,18 +533,18 @@ void HAL_enableAdcInts(HAL_Handle handle)
 //} // end of HAL_enableAdcInts() function
 
 
-//void HAL_enableSciInts(HAL_Handle handle)
-//{
-//    HAL_Obj *obj = (HAL_Obj *)handle;
+void HAL_enableSciInts(HAL_Handle handle)
+{
+    HAL_Obj *obj = (HAL_Obj *)handle;
     // enable the PIE interrupts associated with the SCI interrupts
     // enable SCIB RX interrupt in PIE
-//    PIE_enableInt(obj->pieHandle, PIE_GroupNumber_9, PIE_InterruptSource_SCIBRX);
+    PIE_enableInt(obj->pieHandle, PIE_GroupNumber_9, PIE_InterruptSource_SCIBRX);
     // enable SCI RX interrupts
     // enable SCIB RX interrupt
-//    SCI_enableRxInt(obj->sciBHandle);
+    SCI_enableRxInt(obj->sciBHandle);
     // enable the cpu interrupt for SCI interrupts
-//    CPU_enableInt(obj->cpuHandle, CPU_IntNumber_9);
-//} // end of HAL_enableSciInts() function
+    CPU_enableInt(obj->cpuHandle, CPU_IntNumber_9);
+} // end of HAL_enableSciInts() function
 
 
 void HAL_enableDebugInt(HAL_Handle handle)
@@ -618,9 +618,20 @@ void HAL_enableTimer0Int(HAL_Handle handle)
   CPU_enableInt(obj->cpuHandle,CPU_IntNumber_1);
 
   return;
-} // end of HAL_enableTimer0Int() function
+} // end of HAL_enablePwmInt() function
 
-
+void HAL_enableTimer1Int(HAL_Handle handle)	
+{	
+  HAL_Obj *obj = (HAL_Obj *)handle;
+  
+  // enable the interrupt	
+  TIMER_enableInt(obj->timerHandle[1]);	
+  
+  // enable the cpu interrupt for TINT1	
+  CPU_enableInt(obj->cpuHandle, CPU_IntNumber_13); //Enabling Interrupt no 13, which is for Timer 1 interrupt CPU	
+  
+  return;	
+} // end of HAL_enableTimer1Int() function
 
 void HAL_setupFaults(HAL_Handle handle)
 {
@@ -729,7 +740,7 @@ HAL_Handle HAL_init(void *pMemory,const size_t numBytes)
   obj->spiAHandle = SPI_init((void *)SPIA_BASE_ADDR,sizeof(SPI_Obj));
   obj->spiBHandle = SPI_init((void *)SPIB_BASE_ADDR,sizeof(SPI_Obj));
 
-  // initialize the SCI handles
+  // initialize the SPI handles
   obj->sciAHandle = SCI_init((void *)SCIA_BASE_ADDR,sizeof(SCI_Obj));
   obj->sciBHandle = SCI_init((void *)SCIB_BASE_ADDR,sizeof(SCI_Obj));
 
@@ -774,32 +785,31 @@ HAL_Handle HAL_init(void *pMemory,const size_t numBytes)
 } // end of HAL_init() function
 
 
-//void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams)
-void HAL_setParams(HAL_Handle handle)
+void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams)
 {
-//  uint_least8_t cnt;
+  uint_least8_t cnt;
   HAL_Obj *obj = (HAL_Obj *)handle;
-//  _iq beta_lp_pu = _IQ(pUserParams->offsetPole_rps/(float_t)pUserParams->ctrlFreq_Hz); // FIXME move to er_bldc
-//
-//
-//  HAL_setNumCurrentSensors(handle,pUserParams->numCurrentSensors); // FIXME move to er_bldc
-//  HAL_setNumVoltageSensors(handle,pUserParams->numVoltageSensors); // FIXME move to er_bldc
-//
-//
-//  for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++) // FIXME move to er_bldc
-//    {
-//      HAL_setOffsetBeta_lp_pu(handle,HAL_SensorType_Current,cnt,beta_lp_pu); // FIXME move to er_bldc
-//      HAL_setOffsetInitCond(handle,HAL_SensorType_Current,cnt,_IQ(0.0)); // FIXME move to er_bldc
-//      HAL_setOffsetValue(handle,HAL_SensorType_Current,cnt,_IQ(0.0)); // FIXME move to er_bldc
-//    }
-//
-//
-//  for(cnt=0;cnt<HAL_getNumVoltageSensors(handle);cnt++) // FIXME move to er_bldc
-//    {
-//      HAL_setOffsetBeta_lp_pu(handle,HAL_SensorType_Voltage,cnt,beta_lp_pu); // FIXME move to er_bldc
-//      HAL_setOffsetInitCond(handle,HAL_SensorType_Voltage,cnt,_IQ(0.0)); // FIXME move to er_bldc
-//      HAL_setOffsetValue(handle,HAL_SensorType_Voltage,cnt,_IQ(0.0)); // FIXME move to er_bldc
-//    }
+  _iq beta_lp_pu = _IQ(pUserParams->offsetPole_rps/(float_t)pUserParams->ctrlFreq_Hz);
+
+
+  HAL_setNumCurrentSensors(handle,pUserParams->numCurrentSensors);
+  HAL_setNumVoltageSensors(handle,pUserParams->numVoltageSensors);
+
+
+  for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++)
+    {
+      HAL_setOffsetBeta_lp_pu(handle,HAL_SensorType_Current,cnt,beta_lp_pu);
+      HAL_setOffsetInitCond(handle,HAL_SensorType_Current,cnt,_IQ(0.0));
+      HAL_setOffsetValue(handle,HAL_SensorType_Current,cnt,_IQ(0.0));
+    }
+
+
+  for(cnt=0;cnt<HAL_getNumVoltageSensors(handle);cnt++)
+    {
+      HAL_setOffsetBeta_lp_pu(handle,HAL_SensorType_Voltage,cnt,beta_lp_pu);
+      HAL_setOffsetInitCond(handle,HAL_SensorType_Voltage,cnt,_IQ(0.0));
+      HAL_setOffsetValue(handle,HAL_SensorType_Voltage,cnt,_IQ(0.0));
+    }
 
 
   // disable global interrupts
@@ -847,27 +857,27 @@ void HAL_setParams(HAL_Handle handle)
 
 
   // setup the PWMs
-//  HAL_setupPwms(handle,
-//                (float_t)pUserParams->systemFreq_MHz,
-//                pUserParams->pwmPeriod_usec,
-//                USER_NUM_PWM_TICKS_PER_ISR_TICK);
+  HAL_setupPwms(handle,
+                (float_t)pUserParams->systemFreq_MHz,
+                pUserParams->pwmPeriod_usec,
+                USER_NUM_PWM_TICKS_PER_ISR_TICK);
 
-//#ifdef QEP
+#ifdef QEP
   // setup the QEP
-//  HAL_setupQEP(handle,HAL_Qep_QEP1);
-//  HAL_setupQEP(handle,HAL_Qep_QEP2);
-//#endif
+  HAL_setupQEP(handle,HAL_Qep_QEP1);
+  HAL_setupQEP(handle,HAL_Qep_QEP2);
+#endif
 
   // setup the spiA
-//  HAL_setupSpiA(handle);
+  HAL_setupSpiA(handle);
 
 
   // setup the spiB
-//  HAL_setupSpiB(handle);
+  HAL_setupSpiB(handle);
 
 
   // setup the spiB
-//  HAL_setupSciB(handle);
+  HAL_setupSciB(handle);
 
 
   // setup the PWM DACs
@@ -875,52 +885,52 @@ void HAL_setParams(HAL_Handle handle)
 
 
   // setup the timers
-//  HAL_setupTimers(handle, (float_t)pUserParams->systemFreq_MHz);
-  HAL_setupTimers(handle, (float_t) 90);
+  HAL_setupTimers(handle,
+                  (float_t)pUserParams->systemFreq_MHz);
 
 
   // setup the drv8305 interface
-//  HAL_setupGate(handle);
+  HAL_setupGate(handle);
 
 
   // set the default current bias
-// {
-//   uint_least8_t cnt;
-//   _iq bias = _IQ12mpy(ADC_dataBias,_IQ(pUserParams->current_sf));
-//
-//   for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++)
-//     {
-//       HAL_setBias(handle,HAL_SensorType_Current,cnt,bias);
-//     }
-// }
+ {
+   uint_least8_t cnt;
+   _iq bias = _IQ12mpy(ADC_dataBias,_IQ(pUserParams->current_sf));
+   
+   for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++)
+     {
+       HAL_setBias(handle,HAL_SensorType_Current,cnt,bias);
+     }
+ }
 
 
   //  set the current scale factor
-// {
-//   _iq current_sf = _IQ(pUserParams->current_sf);
-//
-//  HAL_setCurrentScaleFactor(handle,current_sf);
-// }
+ {
+   _iq current_sf = _IQ(pUserParams->current_sf);
+
+  HAL_setCurrentScaleFactor(handle,current_sf);
+ }
 
 
   // set the default voltage bias
-// {
-//   uint_least8_t cnt;
-//   _iq bias = _IQ(0.0);
-//
-//   for(cnt=0;cnt<HAL_getNumVoltageSensors(handle);cnt++)
-//     {
-//       HAL_setBias(handle,HAL_SensorType_Voltage,cnt,bias);
-//     }
-// }
+ {
+   uint_least8_t cnt;
+   _iq bias = _IQ(0.0);
+   
+   for(cnt=0;cnt<HAL_getNumVoltageSensors(handle);cnt++)
+     {
+       HAL_setBias(handle,HAL_SensorType_Voltage,cnt,bias);
+     }
+ }
 
 
   //  set the voltage scale factor
-// {
-//   _iq voltage_sf = _IQ(pUserParams->voltage_sf);
-//
-//  HAL_setVoltageScaleFactor(handle,voltage_sf);
-// }
+ {
+   _iq voltage_sf = _IQ(pUserParams->voltage_sf);
+
+  HAL_setVoltageScaleFactor(handle,voltage_sf);
+ }
 
  return;
 } // end of HAL_setParams() function
@@ -972,48 +982,91 @@ void HAL_setupAdcs(HAL_Handle handle)
   ADC_setIntMode(obj->adcHandle,ADC_IntNumber_1,ADC_IntMode_ClearFlag);
   ADC_setIntSrc(obj->adcHandle,ADC_IntNumber_1,ADC_IntSrc_EOC7);
 
-//  //configure the SOCs for boostxldrv8305_revB on J1 Connection FIXME
-//  // EXT IA-FB
-//  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_0,ADC_SocChanNumber_A0);
-//  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_0,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-//  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_0,ADC_SocSampleDelay_9_cycles);
-//
-//  // EXT IA-FB
-//  // Duplicate conversion due to ADC Initial Conversion bug (SPRZ342)
-//  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_1,ADC_SocChanNumber_A0);
-//  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_1,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-//  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_1,ADC_SocSampleDelay_9_cycles);
-//
-//  // EXT IB-FB
-//  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_2,ADC_SocChanNumber_B0);
-//  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_2,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-//  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_2,ADC_SocSampleDelay_9_cycles);
-//
-//  // EXT IC-FB
-//  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_3,ADC_SocChanNumber_A1);
-//  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_3,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-//  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_3,ADC_SocSampleDelay_9_cycles);
-//
-//  // ADC-Vhb1
-//  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_4,ADC_SocChanNumber_A7);
-//  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_4,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-//  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_4,ADC_SocSampleDelay_9_cycles);
-//
-//  // ADC-Vhb2
-//  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_5,ADC_SocChanNumber_B1);
-//  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_5,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-//  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_5,ADC_SocSampleDelay_9_cycles);
-//
-//  // ADC-Vhb3
-//  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_6,ADC_SocChanNumber_A2);
-//  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_6,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-//  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_6,ADC_SocSampleDelay_9_cycles);
-//
-  // VDCBUS
-  ADC_setSocChanNumber(obj->adcHandle, ADC_SocNumber_7,ADC_SocChanNumber_B2);
-  ADC_setSocTrigSrc(obj->adcHandle, ADC_SocNumber_7,ADC_SocTrigSrc_EPWM1_ADCSOCA);
-  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_7,ADC_SocSampleDelay_9_cycles);
+#ifdef J5
+  //configure the SOCs for boostxldrv8305_revB on J5 Connection
+  // EXT IA-FB
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_0,ADC_SocChanNumber_A3);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_0,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_0,ADC_SocSampleDelay_9_cycles);
 
+  // EXT IA-FB
+  // Duplicate conversion due to ADC Initial Conversion bug (SPRZ342)
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_1,ADC_SocChanNumber_A3);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_1,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_1,ADC_SocSampleDelay_9_cycles);
+
+  // EXT IB-FB
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_2,ADC_SocChanNumber_B3);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_2,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_2,ADC_SocSampleDelay_9_cycles);
+
+  // EXT IC-FB
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_3,ADC_SocChanNumber_A4);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_3,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_3,ADC_SocSampleDelay_9_cycles);
+
+  // ADC-Vhb1
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_4,ADC_SocChanNumber_B7);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_4,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_4,ADC_SocSampleDelay_9_cycles);
+
+  // ADC-Vhb2
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_5,ADC_SocChanNumber_B4);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_5,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_5,ADC_SocSampleDelay_9_cycles);
+
+  // ADC-Vhb3
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_6,ADC_SocChanNumber_A5);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_6,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_6,ADC_SocSampleDelay_9_cycles);
+
+  // VDCBUS
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_7,ADC_SocChanNumber_B5);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_7,ADC_SocTrigSrc_EPWM4_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_7,ADC_SocSampleDelay_9_cycles);
+#else
+  //configure the SOCs for boostxldrv8305_revB on J1 Connection
+  // EXT IA-FB
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_0,ADC_SocChanNumber_A0);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_0,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_0,ADC_SocSampleDelay_9_cycles);
+
+  // EXT IA-FB
+  // Duplicate conversion due to ADC Initial Conversion bug (SPRZ342)
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_1,ADC_SocChanNumber_A0);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_1,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_1,ADC_SocSampleDelay_9_cycles);
+
+  // EXT IB-FB
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_2,ADC_SocChanNumber_B0);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_2,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_2,ADC_SocSampleDelay_9_cycles);
+
+  // EXT IC-FB
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_3,ADC_SocChanNumber_A1);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_3,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_3,ADC_SocSampleDelay_9_cycles);
+
+  // ADC-Vhb1
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_4,ADC_SocChanNumber_A7);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_4,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_4,ADC_SocSampleDelay_9_cycles);
+
+  // ADC-Vhb2
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_5,ADC_SocChanNumber_B1);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_5,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_5,ADC_SocSampleDelay_9_cycles);
+
+  // ADC-Vhb3
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_6,ADC_SocChanNumber_A2);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_6,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_6,ADC_SocSampleDelay_9_cycles);
+
+  // VDCBUS
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_7,ADC_SocChanNumber_B2);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_7,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_7,ADC_SocSampleDelay_9_cycles);
+#endif
   return;
 } // end of HAL_setupAdcs() function
 
@@ -1069,145 +1122,172 @@ void HAL_setupFlash(HAL_Handle handle)
 } // HAL_setupFlash() function
 
 
-//void HAL_setupGate(HAL_Handle handle)
-//{
-//  HAL_Obj *obj = (HAL_Obj *)handle;
-//
-//  DRV8305_setGpioHandle(obj->drv8305Handle,obj->gpioHandle);
-//
-//  DRV8305_setSpiHandle(obj->drv8305Handle,obj->spiAHandle);
-//  DRV8305_setGpioNumber(obj->drv8305Handle,GPIO_Number_50);
-//
-//  return;
-//} // HAL_setupGate() function
-//
+void HAL_setupGate(HAL_Handle handle)
+{
+  HAL_Obj *obj = (HAL_Obj *)handle;
+  
+  DRV8305_setGpioHandle(obj->drv8305Handle,obj->gpioHandle);
+#ifdef J5
+  DRV8305_setSpiHandle(obj->drv8305Handle,obj->spiBHandle);
+  DRV8305_setGpioNumber(obj->drv8305Handle,GPIO_Number_52);
+#else
+  DRV8305_setSpiHandle(obj->drv8305Handle,obj->spiAHandle);
+  DRV8305_setGpioNumber(obj->drv8305Handle,GPIO_Number_50);
+#endif
+
+  return;
+} // HAL_setupGate() function
+
 
 void HAL_setupGpios(HAL_Handle handle)
 {
   HAL_Obj *obj = (HAL_Obj *)handle;
 
 
-//  // PWM1
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_0,GPIO_0_Mode_EPWM1A);
-//
-//  // PWM2
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_1,GPIO_1_Mode_EPWM1B);
-//
-//  // PWM3
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_2,GPIO_2_Mode_EPWM2A);
-//
-//  // PWM4
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_3,GPIO_3_Mode_EPWM2B);
-//
-//  // PWM5
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_4,GPIO_4_Mode_EPWM3A);
-//
-//  // PWM6
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_5,GPIO_5_Mode_EPWM3B);
+  // PWM1
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_0,GPIO_0_Mode_EPWM1A);
 
-  // PWM4A
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_6,GPIO_6_Mode_EPWM4A);
+  // PWM2
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_1,GPIO_1_Mode_EPWM1B);
 
-  // PWM4B
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_7,GPIO_7_Mode_EPWM4B);
+  // PWM3
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_2,GPIO_2_Mode_EPWM2A);
 
-  // PWM5A
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_8,GPIO_8_Mode_EPWM5A);
+  // PWM4
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_3,GPIO_3_Mode_EPWM2B);
 
-  // PWM5B
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_9,GPIO_9_Mode_EPWM5B);
+  // PWM5
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_4,GPIO_4_Mode_EPWM3A);
 
-  // PWM6A
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_10,GPIO_10_Mode_EPWM6A);
+  // PWM6
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_5,GPIO_5_Mode_EPWM3B);
 
-  // PWM6B
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_11,GPIO_11_Mode_EPWM6B);
+  // PWM4A	
+//  GPIO_setMode(obj->gpioHandle,GPIO_Number_6,GPIO_6_Mode_EPWM4A);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_6,GPIO_6_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_6,GPIO_Direction_Output);	
+  GPIO_setHigh(obj->gpioHandle,GPIO_Number_6);	
+  
+  // PWM4B	
+//  GPIO_setMode(obj->gpioHandle,GPIO_Number_7,GPIO_7_Mode_EPWM4B);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_7,GPIO_7_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_7,GPIO_Direction_Output);	
+  GPIO_setHigh(obj->gpioHandle,GPIO_Number_7);	
+  
+  // PWM5A	
+//  GPIO_setMode(obj->gpioHandle,GPIO_Number_8,GPIO_8_Mode_EPWM5A);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_8,GPIO_8_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_8,GPIO_Direction_Output);	
+  GPIO_setHigh(obj->gpioHandle,GPIO_Number_8);	
+  
+  // PWM5B	
+//  GPIO_setMode(obj->gpioHandle,GPIO_Number_9,GPIO_9_Mode_EPWM5B);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_9,GPIO_9_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_9,GPIO_Direction_Output);	
+  GPIO_setHigh(obj->gpioHandle,GPIO_Number_9);	
+  
+  // PWM6A	
+//  GPIO_setMode(obj->gpioHandle,GPIO_Number_10,GPIO_10_Mode_EPWM6A);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_10,GPIO_10_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_10,GPIO_Direction_Output);
+  
+  // PWM6B	
+//  GPIO_setMode(obj->gpioHandle,GPIO_Number_11,GPIO_11_Mode_EPWM6B);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_11,GPIO_11_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_11,GPIO_Direction_Output);
 
   // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_12,GPIO_12_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_12,GPIO_12_Mode_GeneralPurpose);
 
   // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_13,GPIO_13_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_13,GPIO_13_Mode_GeneralPurpose);
 
   // SPIB CLK
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_14,GPIO_14_Mode_SPICLKB);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_14,GPIO_14_Mode_SPICLKB);
+  GPIO_setPullup(obj->gpioHandle,GPIO_Number_14,GPIO_Pullup_Disable);
 
-//  // UARTB RX
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_15,GPIO_15_Mode_SCIRXDB);
+  // UARTB RX
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_15,GPIO_15_Mode_SCIRXDB);
 
   // Set Qualification Period for GPIO16-23, 5*2*(1/90MHz) = 0.11us
   GPIO_setQualificationPeriod(obj->gpioHandle,GPIO_Number_16,5);
 
   // SPIA SIMO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_16,GPIO_16_Mode_SPISIMOA);
-//
-//  // SPIA SOMI
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_17,GPIO_17_Mode_SPISOMIA);
-//
-//  // SPIA CLK
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_18,GPIO_18_Mode_SPICLKA);
-//
-//  // SPIA CS
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_19,GPIO_19_Mode_SPISTEA_NOT);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_16,GPIO_16_Mode_SPISIMOA);
+
+  // SPIA SOMI
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_17,GPIO_17_Mode_SPISOMIA);
+
+  // SPIA CLK
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_18,GPIO_18_Mode_SPICLKA);
+
+  // SPIA CS
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_19,GPIO_19_Mode_SPISTEA_NOT);
   
-//#ifdef QEP
+#ifdef QEP
   // EQEP1A
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_EQEP1A);
-//  GPIO_setQualification(obj->gpioHandle,GPIO_Number_20,GPIO_Qual_Sample_3);
-//
-//  // EQEP1B
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_21,GPIO_21_Mode_EQEP1B);
-//  GPIO_setQualification(obj->gpioHandle,GPIO_Number_21,GPIO_Qual_Sample_3);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_EQEP1A);
+  GPIO_setQualification(obj->gpioHandle,GPIO_Number_20,GPIO_Qual_Sample_3);
+
+  // EQEP1B
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_21,GPIO_21_Mode_EQEP1B);
+  GPIO_setQualification(obj->gpioHandle,GPIO_Number_21,GPIO_Qual_Sample_3);
 
   // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_22,GPIO_22_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_22,GPIO_22_Mode_GeneralPurpose);
 
   // EQEP1I
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_23,GPIO_23_Mode_EQEP1I);
-//  GPIO_setQualification(obj->gpioHandle,GPIO_Number_23,GPIO_Qual_Sample_3);
-//#else
-//  // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_GeneralPurpose);
-//
-//  // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_21,GPIO_21_Mode_GeneralPurpose);
-//
-//  // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_22,GPIO_22_Mode_GeneralPurpose);
-//
-//  // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_23,GPIO_23_Mode_GeneralPurpose);
-//#endif
-
-  // SPIB SIMO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_24,GPIO_24_Mode_SPISIMOB);
-
-  // SPIB SOMI
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_25,GPIO_25_Mode_SPISOMIB);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_23,GPIO_23_Mode_EQEP1I);
+  GPIO_setQualification(obj->gpioHandle,GPIO_Number_23,GPIO_Qual_Sample_3);
+#else
+  // GPIO
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_GeneralPurpose);
 
   // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_26,GPIO_26_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_21,GPIO_21_Mode_GeneralPurpose);
 
-  // SPIB CS
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_27,GPIO_27_Mode_SPISTEB_NOT);
+  // GPIO
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_22,GPIO_22_Mode_GeneralPurpose);
+
+  // GPIO
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_23,GPIO_23_Mode_GeneralPurpose);
+#endif
+
+  // SPIB SIMO	
+//  GPIO_setQualificationPeriod(obj->gpioHandle,GPIO_Number_24, 5);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_24,GPIO_24_Mode_SPISIMOB);
+  GPIO_setPullup(obj->gpioHandle,GPIO_Number_24,GPIO_Pullup_Disable);
+
+  // SPIB SOMI
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_25,GPIO_25_Mode_SPISOMIB);
+  GPIO_setPullup(obj->gpioHandle,GPIO_Number_25,GPIO_Pullup_Disable);
+
+  // GPIO
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_26,GPIO_26_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_26,GPIO_Direction_Output);
+
+  // SPIB CS	
+//  GPIO_setMode(obj->gpioHandle,GPIO_Number_27,GPIO_27_Mode_SPISTEB_NOT);	
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_27,GPIO_27_Mode_GeneralPurpose);	
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_27,GPIO_Direction_Output);
 
   // OCTWn
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_28,GPIO_28_Mode_TZ2_NOT);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_28,GPIO_28_Mode_TZ2_NOT);
 
   // FAULTn
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_29,GPIO_29_Mode_TZ3_NOT);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_29,GPIO_29_Mode_TZ3_NOT);
 
   // CAN RX
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_30,GPIO_30_Mode_CANRXA);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_30,GPIO_30_Mode_CANRXA);
 
   // CAN TX
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_31,GPIO_31_Mode_CANTXA);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_31,GPIO_31_Mode_CANTXA);
 
   // I2C Data
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_32,GPIO_32_Mode_SDAA);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_32,GPIO_32_Mode_SDAA);
 
   // I2C Clock
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_33,GPIO_33_Mode_SCLA);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_33,GPIO_33_Mode_SCLA);
 
   // LED D9
   GPIO_setMode(obj->gpioHandle,GPIO_Number_34,GPIO_34_Mode_GeneralPurpose);
@@ -1225,75 +1305,75 @@ void HAL_setupGpios(HAL_Handle handle)
   GPIO_setLow(obj->gpioHandle,GPIO_Number_39);
   GPIO_setDirection(obj->gpioHandle,GPIO_Number_39,GPIO_Direction_Output);
 
-//  // DAC1
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_40,GPIO_40_Mode_EPWM7A);
-//
-//  // DAC2
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_41,GPIO_41_Mode_EPWM7B);
-//
-//  // DAC3
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_42,GPIO_42_Mode_EPWM8A);
-//
-//  // DAC4
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_43,GPIO_43_Mode_EPWM8B);
+  // DAC1
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_40,GPIO_40_Mode_EPWM7A);
+
+  // DAC2
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_41,GPIO_41_Mode_EPWM7B);
+
+  // DAC3
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_42,GPIO_42_Mode_EPWM8A);
+
+  // DAC4
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_43,GPIO_43_Mode_EPWM8B);
 
   // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_44,GPIO_44_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_44,GPIO_44_Mode_GeneralPurpose);
 
   // Set Qualification Period for GPIO50-55, 5*2*(1/90MHz) = 0.11us
   GPIO_setQualificationPeriod(obj->gpioHandle,GPIO_Number_50,5);
 
-//  // DRV8305 Enable Gate
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_50,GPIO_50_Mode_GeneralPurpose);
-//  GPIO_setLow(obj->gpioHandle,GPIO_Number_50);
-//  GPIO_setDirection(obj->gpioHandle,GPIO_Number_50,GPIO_Direction_Output);
-//
-//  // DRV8305 DC Calibration
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_51,GPIO_51_Mode_GeneralPurpose);
-//  GPIO_setLow(obj->gpioHandle,GPIO_Number_51);
-//  GPIO_setDirection(obj->gpioHandle,GPIO_Number_51,GPIO_Direction_Output);
-//
-//  // DRV8305 Enable Gate
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_52,GPIO_52_Mode_GeneralPurpose);
-//  GPIO_setLow(obj->gpioHandle,GPIO_Number_52);
-//  GPIO_setDirection(obj->gpioHandle,GPIO_Number_52,GPIO_Direction_Output);
-//
-//  // DRV8305 Device Calibration
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_53,GPIO_53_Mode_GeneralPurpose);
-//  GPIO_setLow(obj->gpioHandle,GPIO_Number_53);
-//  GPIO_setDirection(obj->gpioHandle,GPIO_Number_53,GPIO_Direction_Output);
+  // DRV8305 Enable Gate
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_50,GPIO_50_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_50);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_50,GPIO_Direction_Output);
+
+  // DRV8305 DC Calibration
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_51,GPIO_51_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_51);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_51,GPIO_Direction_Output);
+
+  // DRV8305 Enable Gate
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_52,GPIO_52_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_52);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_52,GPIO_Direction_Output);
+
+  // DRV8305 Device Calibration
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_53,GPIO_53_Mode_GeneralPurpose);
+  GPIO_setPullup(obj->gpioHandle,GPIO_Number_53,GPIO_Pullup_Disable);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_53,GPIO_Direction_Output);
   
   // Set Qualification Period for GPIO56-58, 5*2*(1/90MHz) = 0.11us
   GPIO_setQualificationPeriod(obj->gpioHandle,GPIO_Number_56,5);
   
-//#ifdef QEP
+#ifdef QEP
   // EQEP2A
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_54,GPIO_54_Mode_EQEP2A);
-//  GPIO_setQualification(obj->gpioHandle,GPIO_Number_54,GPIO_Qual_Sample_3);
-//
-//  // EQEP2B
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_55,GPIO_55_Mode_EQEP2B);
-//  GPIO_setQualification(obj->gpioHandle,GPIO_Number_55,GPIO_Qual_Sample_3);
-//
-//  // EQEP2I
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_56,GPIO_56_Mode_EQEP2I);
-//  GPIO_setQualification(obj->gpioHandle,GPIO_Number_56,GPIO_Qual_Sample_3);
-//#else
-//  // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_54,GPIO_54_Mode_GeneralPurpose);
-//
-//  // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_55,GPIO_55_Mode_GeneralPurpose);
-//
-//  // GPIO
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_56,GPIO_56_Mode_GeneralPurpose);
-//#endif
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_54,GPIO_54_Mode_EQEP2A);
+  GPIO_setQualification(obj->gpioHandle,GPIO_Number_54,GPIO_Qual_Sample_3);
+
+  // EQEP2B
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_55,GPIO_55_Mode_EQEP2B);
+  GPIO_setQualification(obj->gpioHandle,GPIO_Number_55,GPIO_Qual_Sample_3);
+
+  // EQEP2I
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_56,GPIO_56_Mode_EQEP2I);
+  GPIO_setQualification(obj->gpioHandle,GPIO_Number_56,GPIO_Qual_Sample_3);
+#else
+  // GPIO
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_54,GPIO_54_Mode_GeneralPurpose);
+
+  // GPIO
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_55,GPIO_55_Mode_GeneralPurpose);
+
+  // GPIO
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_56,GPIO_56_Mode_GeneralPurpose);
+#endif
 
   // No Connection
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_57,GPIO_57_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_57,GPIO_57_Mode_GeneralPurpose);
 
   // UARTB TX
-//  GPIO_setMode(obj->gpioHandle,GPIO_Number_58,GPIO_58_Mode_SCITXDB);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_58,GPIO_58_Mode_SCITXDB);
 
   return;
 }  // end of HAL_setupGpios() function
@@ -1335,10 +1415,10 @@ void HAL_setupPeripheralClks(HAL_Handle handle)
 
   CLK_enableEcanaClock(obj->clkHandle);
 
-//#ifdef QEP
+#ifdef QEP
   CLK_enableEqep1Clock(obj->clkHandle);
   CLK_enableEqep2Clock(obj->clkHandle);
-//#endif
+#endif
 
   CLK_enablePwmClock(obj->clkHandle,PWM_Number_1);
   CLK_enablePwmClock(obj->clkHandle,PWM_Number_2);
@@ -1357,8 +1437,8 @@ void HAL_setupPeripheralClks(HAL_Handle handle)
 
   CLK_disableClaClock(obj->clkHandle);
 
-//  CLK_disableSciaClock(obj->clkHandle);
-//  CLK_enableScibClock(obj->clkHandle);
+  CLK_disableSciaClock(obj->clkHandle);
+  CLK_enableScibClock(obj->clkHandle);
 
   CLK_enableSpiaClock(obj->clkHandle);
   CLK_enableSpibClock(obj->clkHandle);
@@ -1526,120 +1606,122 @@ void HAL_setupPwms(HAL_Handle handle,
   return;
 }  // end of HAL_setupPwms() function
 
-//#ifdef QEP
-//void HAL_setupQEP(HAL_Handle handle,HAL_QepSelect_e qep)
-//{
-//  HAL_Obj   *obj = (HAL_Obj *)handle;
-//
-//
-//  // hold the counter in reset
-//  QEP_reset_counter(obj->qepHandle[qep]);
-//
-//  // set the QPOSINIT register
-//  QEP_set_posn_init_count(obj->qepHandle[qep], 0);
-//
-//  // disable all interrupts
-//  QEP_disable_all_interrupts(obj->qepHandle[qep]);
-//
-//  // clear the interrupt flags
-//  QEP_clear_all_interrupt_flags(obj->qepHandle[qep]);
-//
-//  // clear the position counter
-//  QEP_clear_posn_counter(obj->qepHandle[qep]);
-//
-//  // setup the max position
-//  QEP_set_max_posn_count(obj->qepHandle[qep], (4 * USER_MOTOR_ENCODER_LINES) - 1); // FIXME ????
-////  QEP_set_max_posn_count(obj->qepHandle[qep], (USER_MOTOR_ENCODER_LINES - 1) ); // FIXME ????
-//
-//  // setup the QDECCTL register
-//  QEP_set_QEP_source(obj->qepHandle[qep], QEP_Qsrc_Quad_Count_Mode);
-//  QEP_disable_sync_out(obj->qepHandle[qep]);
-//  QEP_set_swap_quad_inputs(obj->qepHandle[qep], QEP_Swap_Not_Swapped);
-//  QEP_disable_gate_index(obj->qepHandle[qep]);
-//  QEP_set_ext_clock_rate(obj->qepHandle[qep], QEP_Xcr_2x_Res);
-//  QEP_set_A_polarity(obj->qepHandle[qep], QEP_Qap_No_Effect);
-//  QEP_set_B_polarity(obj->qepHandle[qep], QEP_Qbp_No_Effect);
-//  QEP_set_index_polarity(obj->qepHandle[qep], QEP_Qip_No_Effect);
-//
-//  // setup the QEPCTL register
-//  QEP_set_emu_control(obj->qepHandle[qep], QEPCTL_Freesoft_Unaffected_Halt);
-//  QEP_set_posn_count_reset_mode(obj->qepHandle[qep], QEPCTL_Pcrm_Max_Reset);
-//  QEP_set_strobe_event_init(obj->qepHandle[qep], QEPCTL_Sei_Nothing);
-//  QEP_set_index_event_init(obj->qepHandle[qep], QEPCTL_Iei_Nothing);
-//  QEP_set_index_event_latch(obj->qepHandle[qep], QEPCTL_Iel_Rising_Edge);
-//  QEP_set_soft_init(obj->qepHandle[qep], QEPCTL_Swi_Nothing);
-//  QEP_disable_unit_timer(obj->qepHandle[qep]);
-//  QEP_disable_watchdog(obj->qepHandle[qep]);
-//
-//  // setup the QPOSCTL register
-//  QEP_disable_posn_compare(obj->qepHandle[qep]);
-//
-//  // setup the QCAPCTL register
-//  QEP_disable_capture(obj->qepHandle[qep]);
-//
-//  // renable the position counter
-//  QEP_enable_counter(obj->qepHandle[qep]);
-//
-//
-//  return;
-//}
-//#endif
-
-//void HAL_setupSpiA(HAL_Handle handle)
-//{
-//  HAL_Obj   *obj = (HAL_Obj *)handle;
-//
-//  SPI_reset(obj->spiAHandle);
-//  SPI_setMode(obj->spiAHandle,SPI_Mode_Master);
-//  SPI_setClkPolarity(obj->spiAHandle,SPI_ClkPolarity_OutputRisingEdge_InputFallingEdge);
-//  SPI_enableTx(obj->spiAHandle);
-//  SPI_enableTxFifoEnh(obj->spiAHandle);
-//  SPI_enableTxFifo(obj->spiAHandle);
-//  SPI_setTxDelay(obj->spiAHandle,0x0018);
-//  SPI_setBaudRate(obj->spiAHandle,(SPI_BaudRate_e)(0x000d));
-//  SPI_setCharLength(obj->spiAHandle,SPI_CharLength_16_Bits);
-//  SPI_setSuspend(obj->spiAHandle,SPI_TxSuspend_free);
-//  SPI_enable(obj->spiAHandle);
-//
-//  return;
-//}  // end of HAL_setupSpiA() function
+#ifdef QEP
+void HAL_setupQEP(HAL_Handle handle,HAL_QepSelect_e qep)
+{
+  HAL_Obj   *obj = (HAL_Obj *)handle;
 
 
-//void HAL_setupSpiB(HAL_Handle handle)
-//{
-//  HAL_Obj   *obj = (HAL_Obj *)handle;
-//
-//  SPI_reset(obj->spiBHandle);
-//  SPI_setMode(obj->spiBHandle,SPI_Mode_Master);
-//  SPI_setClkPolarity(obj->spiBHandle,SPI_ClkPolarity_OutputRisingEdge_InputFallingEdge);
-//  SPI_enableTx(obj->spiBHandle);
-//  SPI_enableTxFifoEnh(obj->spiBHandle);
-//  SPI_enableTxFifo(obj->spiBHandle);
-//  SPI_setTxDelay(obj->spiBHandle,0x0018);
-//  SPI_setBaudRate(obj->spiBHandle,(SPI_BaudRate_e)(0x000d));
-//  SPI_setCharLength(obj->spiBHandle,SPI_CharLength_16_Bits);
-//  SPI_setSuspend(obj->spiBHandle,SPI_TxSuspend_free);
-//  SPI_enable(obj->spiBHandle);
-//
-//  return;
-//}  // end of HAL_setupSpiB() function
+  // hold the counter in reset
+  QEP_reset_counter(obj->qepHandle[qep]);
 
-//void HAL_setupSciB(HAL_Handle handle)
-//{
-//    HAL_Obj *obj = (HAL_Obj *)handle;
-//    SCI_reset(obj->sciBHandle);
-//    SCI_enableTx(obj->sciBHandle);
-//    SCI_enableRx(obj->sciBHandle);
-//    SCI_disableParity(obj->sciBHandle);
-//    SCI_setNumStopBits(obj->sciBHandle, SCI_NumStopBits_One);
-//    SCI_setCharLength(obj->sciBHandle, SCI_CharLength_8_Bits);
-//    // set baud rate to 115200
-//    SCI_setBaudRate(obj->sciBHandle, (SCI_BaudRate_e) (0x0061));
-//    SCI_setPriority(obj->sciBHandle, SCI_Priority_FreeRun);
-//    SCI_enable(obj->sciBHandle);
-//    return;
-//    // end of HAL_setupSciB() function
-//}
+  // set the QPOSINIT register
+  QEP_set_posn_init_count(obj->qepHandle[qep], 0);
+
+  // disable all interrupts
+  QEP_disable_all_interrupts(obj->qepHandle[qep]);
+
+  // clear the interrupt flags
+  QEP_clear_all_interrupt_flags(obj->qepHandle[qep]);
+
+  // clear the position counter
+  QEP_clear_posn_counter(obj->qepHandle[qep]);
+
+  // setup the max position
+  QEP_set_max_posn_count(obj->qepHandle[qep], (4 * USER_MOTOR_ENCODER_LINES) - 1); // FIXME ????
+//  QEP_set_max_posn_count(obj->qepHandle[qep], (USER_MOTOR_ENCODER_LINES - 1) ); // FIXME ????
+
+  // setup the QDECCTL register
+  QEP_set_QEP_source(obj->qepHandle[qep], QEP_Qsrc_Quad_Count_Mode);
+  QEP_disable_sync_out(obj->qepHandle[qep]);
+  QEP_set_swap_quad_inputs(obj->qepHandle[qep], QEP_Swap_Not_Swapped);
+  QEP_disable_gate_index(obj->qepHandle[qep]);
+  QEP_set_ext_clock_rate(obj->qepHandle[qep], QEP_Xcr_2x_Res);
+  QEP_set_A_polarity(obj->qepHandle[qep], QEP_Qap_No_Effect);
+  QEP_set_B_polarity(obj->qepHandle[qep], QEP_Qbp_No_Effect);
+  QEP_set_index_polarity(obj->qepHandle[qep], QEP_Qip_No_Effect);
+
+  // setup the QEPCTL register
+  QEP_set_emu_control(obj->qepHandle[qep], QEPCTL_Freesoft_Unaffected_Halt);
+  QEP_set_posn_count_reset_mode(obj->qepHandle[qep], QEPCTL_Pcrm_Max_Reset);
+  QEP_set_strobe_event_init(obj->qepHandle[qep], QEPCTL_Sei_Nothing);
+  QEP_set_index_event_init(obj->qepHandle[qep], QEPCTL_Iei_Nothing);
+  QEP_set_index_event_latch(obj->qepHandle[qep], QEPCTL_Iel_Rising_Edge);
+  QEP_set_soft_init(obj->qepHandle[qep], QEPCTL_Swi_Nothing);
+  QEP_disable_unit_timer(obj->qepHandle[qep]);
+  QEP_disable_watchdog(obj->qepHandle[qep]);
+
+  // setup the QPOSCTL register
+  QEP_disable_posn_compare(obj->qepHandle[qep]);
+
+  // setup the QCAPCTL register
+  QEP_disable_capture(obj->qepHandle[qep]);
+
+  // renable the position counter
+  QEP_enable_counter(obj->qepHandle[qep]);
+
+
+  return;
+}
+#endif
+
+void HAL_setupSpiA(HAL_Handle handle)
+{
+  HAL_Obj   *obj = (HAL_Obj *)handle;
+  
+  SPI_reset(obj->spiAHandle);
+  SPI_setMode(obj->spiAHandle,SPI_Mode_Master);
+  SPI_setClkPolarity(obj->spiAHandle,SPI_ClkPolarity_OutputRisingEdge_InputFallingEdge);
+  SPI_enableTx(obj->spiAHandle);
+  SPI_enableTxFifoEnh(obj->spiAHandle);
+  SPI_enableTxFifo(obj->spiAHandle);
+  SPI_setTxDelay(obj->spiAHandle,0x0018);
+  SPI_setBaudRate(obj->spiAHandle,(SPI_BaudRate_e)(0x000d));
+  SPI_setCharLength(obj->spiAHandle,SPI_CharLength_16_Bits);
+  SPI_setSuspend(obj->spiAHandle,SPI_TxSuspend_free);
+  SPI_enable(obj->spiAHandle);
+  
+  return;
+}  // end of HAL_setupSpiA() function
+
+void HAL_setupSpiB(HAL_Handle handle)	
+{	
+  HAL_Obj   *obj = (HAL_Obj *)handle;
+  
+  SPI_reset(obj->spiBHandle);	
+  SPI_setMode(obj->spiBHandle,SPI_Mode_Master);	
+  SPI_setClkPolarity(obj->spiBHandle,SPI_ClkPolarity_OutputRisingEdge_InputFallingEdge);	
+  SPI_setClkPhase(obj->spiBHandle,SPI_ClkPhase_Delayed);	
+  SPI_enableTx(obj->spiBHandle);	
+  SPI_enableTxFifoEnh(obj->spiBHandle);	
+  SPI_enableTxFifo(obj->spiBHandle);	
+  SPI_setTxDelay(obj->spiBHandle,0x0018);
+  SPI_setBaudRate(obj->spiBHandle,(SPI_BaudRate_e)(30 << 0)); 
+  // Possible vaules for SPIBRR: 44 - 2MHz, 35 - 2.5MHz, 30 - ~2,9 MHz
+  // SPIBRR = (90MHz/BaudRate)-1
+  SPI_setCharLength(obj->spiBHandle,SPI_CharLength_16_Bits);	
+  SPI_setSuspend(obj->spiBHandle,SPI_TxSuspend_free);	
+  SPI_enable(obj->spiBHandle);	
+  
+  return;	
+}  // end of HAL_setupSpiB() function
+
+void HAL_setupSciB(HAL_Handle handle)
+{
+    HAL_Obj *obj = (HAL_Obj *)handle;
+    SCI_reset(obj->sciBHandle);
+    SCI_enableTx(obj->sciBHandle);
+    SCI_enableRx(obj->sciBHandle);
+    SCI_disableParity(obj->sciBHandle);
+    SCI_setNumStopBits(obj->sciBHandle, SCI_NumStopBits_One);
+    SCI_setCharLength(obj->sciBHandle, SCI_CharLength_8_Bits);
+    // set baud rate to 115200
+    SCI_setBaudRate(obj->sciBHandle, (SCI_BaudRate_e) (0x0061));
+    SCI_setPriority(obj->sciBHandle, SCI_Priority_FreeRun);
+    SCI_enable(obj->sciBHandle);
+    return;
+    // end of HAL_setupSciB() function
+}
 
 
 void HAL_setupPwmDacs(HAL_Handle handle)
@@ -1709,54 +1791,63 @@ void HAL_setupPwmDacs(HAL_Handle handle)
 }  // end of HAL_setupPwmDacs() function
 
 
-void HAL_setupTimers(HAL_Handle handle,const float_t systemFreq_MHz)
-{
-  HAL_Obj  *obj = (HAL_Obj *)handle;
-  uint32_t  timerPeriod_0p5ms = (uint32_t)(systemFreq_MHz * (float_t)500.0) - 1;
-  // use timer 0 for frequency diagnostics
-  TIMER_setDecimationFactor(obj->timerHandle[0],0);
-  TIMER_setEmulationMode(obj->timerHandle[0],TIMER_EmulationMode_RunFree);
-  TIMER_setPeriod(obj->timerHandle[0],timerPeriod_0p5ms);
-  TIMER_setPreScaler(obj->timerHandle[0],0);
-
-  // use timer 2 for CPU time diagnostics
-  TIMER_setDecimationFactor(obj->timerHandle[2],0);
-  TIMER_setEmulationMode(obj->timerHandle[2],TIMER_EmulationMode_RunFree);
-  TIMER_setPeriod(obj->timerHandle[2],0xFFFFFFFF);
-  TIMER_setPreScaler(obj->timerHandle[2],0);
-
-  return;
+void HAL_setupTimers(HAL_Handle handle, const float_t systemFreq_MHz)	
+{	
+  HAL_Obj  *obj = (HAL_Obj *)handle;	
+  uint32_t  timerPeriod_0p5ms = (uint32_t)(systemFreq_MHz * (float_t)500.0) - 1;	
+  uint32_t  timerPeriod_10ms = (uint32_t)(systemFreq_MHz * (float_t)10000.0) - 1;	
+  uint32_t  timerPeriod_my_s = (uint32_t)(systemFreq_MHz * (float_t)1000000.0) - 1;	
+  
+  // use timer 0 for frequency diagnostics	
+  TIMER_setDecimationFactor(obj->timerHandle[0],0);	
+  TIMER_setEmulationMode(obj->timerHandle[0],TIMER_EmulationMode_RunFree);	
+  TIMER_setPeriod(obj->timerHandle[0],timerPeriod_0p5ms);	
+  TIMER_setPreScaler(obj->timerHandle[0],0);	
+  
+  // use timer 1 for SPI interrupt
+  TIMER_setDecimationFactor(obj->timerHandle[1],0);	
+  TIMER_setEmulationMode(obj->timerHandle[1],TIMER_EmulationMode_RunFree);	
+  TIMER_setPeriod(obj->timerHandle[1],timerPeriod_10ms);	
+  TIMER_setPreScaler(obj->timerHandle[1],0);	
+  
+  // use timer 2 for CPU time diagnostics	
+  TIMER_setDecimationFactor(obj->timerHandle[2],0);	
+  TIMER_setEmulationMode(obj->timerHandle[2],TIMER_EmulationMode_RunFree);	
+  TIMER_setPeriod(obj->timerHandle[2],0xFFFFFFFF);	
+  TIMER_setPreScaler(obj->timerHandle[2],0);	
+  
+  return;	
 }  // end of HAL_setupTimers() function
 
 
-//void HAL_writeDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars)
-//{
-//  HAL_Obj  *obj = (HAL_Obj *)handle;
-//
-//  DRV8305_writeData(obj->drv8305Handle,Spi_8305_Vars);
-//
-//  return;
-//}  // end of HAL_writeDrvData() function
-//
-//
-//void HAL_readDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars)
-//{
-//  HAL_Obj  *obj = (HAL_Obj *)handle;
-//
-//  DRV8305_readData(obj->drv8305Handle,Spi_8305_Vars);
-//
-//  return;
-//}  // end of HAL_readDrvData() function
-//
-//
-//void HAL_setupDrvSpi(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars)
-//{
-//  HAL_Obj  *obj = (HAL_Obj *)handle;
-//
-//  DRV8305_setupSpi(obj->drv8305Handle,Spi_8305_Vars);
-//
-//  return;
-//}  // end of HAL_setupDrvSpi() function
+void HAL_writeDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars)
+{
+  HAL_Obj  *obj = (HAL_Obj *)handle;
+
+  DRV8305_writeData(obj->drv8305Handle,Spi_8305_Vars);
+  
+  return;
+}  // end of HAL_writeDrvData() function
+
+
+void HAL_readDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars)
+{
+  HAL_Obj  *obj = (HAL_Obj *)handle;
+
+  DRV8305_readData(obj->drv8305Handle,Spi_8305_Vars);
+  
+  return;
+}  // end of HAL_readDrvData() function
+
+
+void HAL_setupDrvSpi(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars)
+{
+  HAL_Obj  *obj = (HAL_Obj *)handle;
+
+  DRV8305_setupSpi(obj->drv8305Handle,Spi_8305_Vars);
+
+  return;
+}  // end of HAL_setupDrvSpi() function
 
 
 void HAL_setDacParameters(HAL_Handle handle, HAL_DacData_t *pDacData)
@@ -1777,5 +1868,18 @@ void HAL_setDacParameters(HAL_Handle handle, HAL_DacData_t *pDacData)
 
 	return;
 }  // end of HAL_setDacParameters() function
+
+uint16_t HAL_SPIwrite(HAL_Handle handle, uint16_t data_to_write)	
+{	
+    HAL_Obj  *obj = (HAL_Obj *)handle;
+	
+    SPI_write(obj->spiBHandle, data_to_write);	
+	
+	// Wait until data is received	
+    while(SPI_getRxFifoStatus(obj->spiBHandle) == SPI_FifoStatus_Empty){	
+    }	
+	
+    return(SPI_read(obj->spiBHandle));	
+}  // end of HAL_SPIwrite() function
 
 // end of file
