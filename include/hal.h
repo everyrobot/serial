@@ -193,8 +193,6 @@ typedef enum
 // the globals
 
 extern interrupt void mainISR(void);
-extern interrupt void sciBRxISR(void);
-extern interrupt void spiISR(void);
 
 
 // **************************************************************************
@@ -262,20 +260,6 @@ static inline void HAL_acqTimer0Int(HAL_Handle handle)
 
   return;
 } // end of HAL_acqTimer0Int() function
-
-//! \brief     Acknowledges an interrupt from Timer 1 so that another Timer 1 interrupt can
-//!            happen again.
-//! \param[in] handle     The hardware abstraction layer (HAL) handle
-static inline void HAL_acqTimer1Int(HAL_Handle handle)
-{
-  HAL_Obj *obj = (HAL_Obj *)handle;
-  
-  
-  // clear the Timer 1 interrupt flag
-  TIMER_clearFlag(obj->timerHandle[1]);
- 
-  return;
-} // end of HAL_acqTimer1Int() function
 
 
 //! \brief      Executes calibration routines
@@ -369,10 +353,8 @@ extern void HAL_enablePwmInt(HAL_Handle handle);
 //! \brief     Enables the Timer 0 interrupt
 //! \param[in] handle  The hardware abstraction layer (HAL) handle
 extern void HAL_enableTimer0Int(HAL_Handle handle);
-
 //! \brief     Enables the Timer 1 interrupt
 //! \param[in] handle  The hardware abstraction layer (HAL) handle
-extern void HAL_enableTimer1Int(HAL_Handle handle);
 
 //! \brief     Gets the ADC delay value
 //! \param[in] handle     The hardware abstraction layer (HAL) handle
@@ -556,8 +538,7 @@ static inline void HAL_initIntVectorTable(HAL_Handle handle)
 
   pie->ADCINT1 = &mainISR;
 //  pie->ADCINT1_HP = &mainISR;
-  pie->SCIRXINTB  = &sciBRxISR;
-  pie->TINT1 = &spiISR;
+
 
   DISABLE_PROTECTED_REGISTER_WRITE_MODE;
 
@@ -1008,7 +989,8 @@ static inline void HAL_setVoltageScaleFactor(HAL_Handle handle,const _iq voltage
 //!             offset values for voltage and current measurements.
 //! \param[in]  handle       The hardware abstraction layer (HAL) handle
 //! \param[in]  pUserParams  The pointer to the user parameters
-extern void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams);
+//extern void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams);
+extern void HAL_setParams(HAL_Handle handle);
 
 
 //! \brief      Sets up the ADCs (Analog to Digital Converters)
@@ -1066,22 +1048,22 @@ extern void HAL_setupPwmDacs(HAL_Handle handle);
 
 //! \brief     Sets up the QEP peripheral
 //! \param[in] handle  The hardware abstraction layer (HAL) handle
-extern void HAL_setupQEP(HAL_Handle handle,HAL_QepSelect_e qep);
+//extern void HAL_setupQEP(HAL_Handle handle,HAL_QepSelect_e qep);
 
 
 //! \brief     Sets up the spiA peripheral
 //! \param[in] handle  The hardware abstraction layer (HAL) handle
-extern void HAL_setupSpiA(HAL_Handle handle);
+//extern void HAL_setupSpiA(HAL_Handle handle);
 
 
 //! \brief     Sets up the spiB peripheral
 //! \param[in] handle  The hardware abstraction layer (HAL) handle
-extern void HAL_setupSpiB(HAL_Handle handle);
+//extern void HAL_setupSpiB(HAL_Handle handle);
 
 
 //! \brief     Sets up the sciB peripheral
 //! \param[in] handle  The hardware abstraction layer (HAL) handle
-extern void HAL_setupSciB(HAL_Handle handle);
+//extern void HAL_setupSciB(HAL_Handle handle);
 
 
 //! \brief     Sets up the timers
@@ -1428,29 +1410,24 @@ void HAL_osc2Comp(HAL_Handle handle, const int16_t sensorSample);
 //! \brief     Writes data to the driver
 //! \param[in] handle         The hardware abstraction layer (HAL) handle
 //! \param[in] Spi_8305_Vars  SPI variables
-void HAL_writeDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars);
+//void HAL_writeDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars);
 
 
 //! \brief     Reads data from the driver
 //! \param[in] handle         The hardware abstraction layer (HAL) handle
 //! \param[in] Spi_8305_Vars  SPI variables
-void HAL_readDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars);
+//void HAL_readDrvData(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars);
 
 
 //! \brief     Sets up the SPI interface for the driver
 //! \param[in] handle         The hardware abstraction layer (HAL) handle
 //! \param[in] Spi_8305_Vars  SPI variables
-void HAL_setupDrvSpi(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars);
+//void HAL_setupDrvSpi(HAL_Handle handle, DRV_SPI_8305_Vars_t *Spi_8305_Vars);
 
 //! \brief     Writes DAC data to the PWM comparators for DAC (digital-to-analog conversion) output
 //! \param[in] handle    The hardware abstraction layer (HAL) handle
 //! \param[in] pDacData  The pointer to the DAC data
 void HAL_setDacParameters(HAL_Handle handle, HAL_DacData_t *pDacData);
-
-//! \brief     Sends command for DAC and returns value of measured voltage
-//! \param[in] handle           The hardware abstraction layer (HAL) handle
-//! \param[in] data_to_write    Command for DAC
-uint16_t HAL_SPIwrite(HAL_Handle handle, uint16_t data_to_write);
 
 #ifdef __cplusplus
 }
@@ -1458,5 +1435,4 @@ uint16_t HAL_SPIwrite(HAL_Handle handle, uint16_t data_to_write);
 
 //@} // ingroup
 #endif // end of _HAL_H_ definition
-
 

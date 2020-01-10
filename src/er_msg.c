@@ -30,14 +30,14 @@
 //    if(gMsgResponse.body_size > 0){
 //        free(gMsgResponse.body);
 //    }
-//    gMsgResponse.source_id = 0;
-//    gMsgResponse.destination_id = 0;
-//    gMsgResponse.register_id = 0;
-//    gMsgResponse.flags = 0;
-//    gMsgResponse.body_size = 0;
-//    gMsgResponse.header_crc = 0;
-//    gMsgResponse.body = NULL;
-//    gMsgResponse.body_crc = 0;
+//   (* message).source_id = 0;
+//   (* message).destination_id = 0;
+//   (* message).register_id = 0;
+//   (* message).flags = 0;
+//   (* message).body_size = 0;
+//   (* message).header_crc = 0;
+//   (* message).body = NULL;
+//   (* message).body_crc = 0;
 //
 //}
 
@@ -160,7 +160,7 @@ bool      msg__check(volatile ER_Msg * message) {
 
     switch ((* message).register_id) {
 
-        case ER_REG_SET_POSITION_SP: {
+        case ER_REG_BLDC_SET_POSITION_SP: {
             if ( (* message).body_size == 4 ) return true;
             break;
 
@@ -175,7 +175,7 @@ bool      msg__create(volatile ER_Msg * message) {
 
     switch ((* message).register_id) {
 
-        case ER_REG_SET_POSITION_SP: { // Set position setpoint
+        case ER_REG_BLDC_SET_POSITION_SP: { // Set position setpoint
 //            if ( (* message).body_size == 4 ) return true;
             break;
 
@@ -263,51 +263,51 @@ float   msg__get_float_from_body(volatile ER_Msg * message, uint16_t start){
 //    return int_v;
 //}
 
-//void     msg__add_uint16_to_body(uint16_t value){
-//
-//    uint16_t body_size = gMsgResponse.body_size;
-//    if(gMsgResponse.body == NULL) {
-//        gMsgResponse.body = (char *) malloc( sizeof(char) * (body_size + 2));
-//    }
-//    else {
-//        gMsgResponse.body = (char *) realloc(&gMsgResponse.body, sizeof(char) * (body_size + 2));
-//    }
-//
-//    if(gMsgResponse.body != NULL) { // uda�o si� zaalokowac
-//
-//        gMsgResponse.body[body_size] = (char) ((value >> 8) & 0xFF);
-//        gMsgResponse.body[body_size + 1] = (char) (value & 0xFF);
-//        gMsgResponse.body_size = body_size + 2;
-//        gMsgResponse.body_crc = msg__calculate_body_crc(&gMsgResponse);
-//    }
-//    else { // blad alokacji
-//        gMsgResponse.flags |= MSG__ALLOC_FAILED;
-//        gMsgResponse.header_crc = msg__calculate_header_crc(&gMsgResponse);
-//            return;
-//    }
-//
-//}
+void     msg__add_uint16_to_body(volatile ER_Msg * message, uint16_t value){
+
+    uint16_t body_size = (* message).body_size;
+    if((* message).body == NULL) {
+       (* message).body = (char *) malloc( sizeof(char) * (body_size + 2));
+    }
+    else {
+       (* message).body = (char *) realloc((* message).body, sizeof(char) * (body_size + 2));
+    }
+
+    if((* message).body != NULL) { // uda�o si� zaalokowac
+
+       (* message).body[body_size] = (char) ((value >> 8) & 0xFF);
+       (* message).body[body_size + 1] = (char) (value & 0xFF);
+       (* message).body_size = body_size + 2;
+       (* message).body_crc            = msg__calculate_body_crc(message);
+       (* message).header_crc          = msg__calculate_header_crc(message);
+    }
+    else { // blad alokacji
+       (* message).flags |= MSG__ALLOC_FAILED;
+       (* message).header_crc          = msg__calculate_header_crc(message);
+    }
+
+}
 
 //void     msg__add_int16_to_body(int16_t value){
 //
-//    uint16_t body_size = gMsgResponse.body_size;
+//    uint16_t body_size =(* message).body_size;
 //    if(gMsgResponse.body == NULL) {
-//        gMsgResponse.body = (char *) malloc( sizeof(char) * (body_size + 2));
+//       (* message).body = (char *) malloc( sizeof(char) * (body_size + 2));
 //    }
 //    else {
-//        gMsgResponse.body = (char *) realloc(&gMsgResponse.body, sizeof(char) * (body_size + 2));
+//       (* message).body = (char *) realloc(&gMsgResponse.body, sizeof(char) * (body_size + 2));
 //    }
 //
 //    if(gMsgResponse.body != NULL) { // uda�o si� zaalokowac
 //
-//        gMsgResponse.body[body_size] = (char) ((value >> 8) & 0xFF);
-//        gMsgResponse.body[body_size + 1] = (char) (value & 0xFF);
-//        gMsgResponse.body_size = body_size + 2;
-//        gMsgResponse.body_crc = msg__calculate_body_crc(&gMsgResponse);
+//       (* message).body[body_size] = (char) ((value >> 8) & 0xFF);
+//       (* message).body[body_size + 1] = (char) (value & 0xFF);
+//       (* message).body_size = body_size + 2;
+//       (* message).body_crc = msg__calculate_body_crc(&gMsgResponse);
 //    }
 //    else { // blad alokacji
-//        gMsgResponse.flags |= MSG__ALLOC_FAILED;
-//        gMsgResponse.header_crc = msg__calculate_header_crc(&gMsgResponse);
+//       (* message).flags |= MSG__ALLOC_FAILED;
+//       (* message).header_crc = msg__calculate_header_crc(&gMsgResponse);
 //            return;
 //    }
 //
@@ -322,7 +322,7 @@ void     msg__add_int32_to_body(volatile ER_Msg * message, int32_t value){
         (* message).body = (char *) malloc( sizeof(char) * (body_size + 4));
     }
     else {
-        (* message).body = (char *) realloc(&(* message).body, sizeof(char) * (body_size + 4)); // FIXME !!!!
+        (* message).body = (char *) realloc((* message).body, sizeof(char) * (body_size + 4)); // FIXME !!!!
     }
 
     if((* message).body != NULL) { // uda�o si� zaalokowac
@@ -348,26 +348,26 @@ void     msg__add_float_to_body(volatile ER_Msg * message, float value){
 
 //void     msg__add_int32_to_body(volatile ER_Msg * message, int32_t value){
 //
-//    uint16_t body_size = gMsgResponse.body_size;
+//    uint16_t body_size =(* message).body_size;
 //    if(gMsgResponse.body == NULL) {
-//        gMsgResponse.body = (char *) malloc( sizeof(char) * (body_size + 4));
+//       (* message).body = (char *) malloc( sizeof(char) * (body_size + 4));
 //    }
 //    else {
-//        gMsgResponse.body = (char *) realloc(&gMsgResponse.body, sizeof(char) * (body_size + 4));
+//       (* message).body = (char *) realloc(&gMsgResponse.body, sizeof(char) * (body_size + 4));
 //    }
 //
 //    if(gMsgResponse.body != NULL) { // uda�o si� zaalokowac
 //
-//        gMsgResponse.body[body_size] = (char) ((value >> 24) & 0xFF);
-//        gMsgResponse.body[body_size + 1] = (char) ((value >> 16) & 0xFF);
-//        gMsgResponse.body[body_size + 2] = (char) ((value >> 8) & 0xFF);
-//        gMsgResponse.body[body_size + 3] = (char) (value & 0xFF);
-//        gMsgResponse.body_size = body_size + 4;
-//        gMsgResponse.body_crc = msg__calculate_body_crc(&gMsgResponse);
+//       (* message).body[body_size] = (char) ((value >> 24) & 0xFF);
+//       (* message).body[body_size + 1] = (char) ((value >> 16) & 0xFF);
+//       (* message).body[body_size + 2] = (char) ((value >> 8) & 0xFF);
+//       (* message).body[body_size + 3] = (char) (value & 0xFF);
+//       (* message).body_size = body_size + 4;
+//       (* message).body_crc = msg__calculate_body_crc(&gMsgResponse);
 //    }
 //    else { // blad alokacji
-//        gMsgResponse.flags |= MSG__ALLOC_FAILED;
-//        gMsgResponse.header_crc = msg__calculate_header_crc(&gMsgResponse);
+//       (* message).flags |= MSG__ALLOC_FAILED;
+//       (* message).header_crc = msg__calculate_header_crc(&gMsgResponse);
 //            return;
 //    }
 //
@@ -385,3 +385,80 @@ float      msg__convert_iq_to_float(long iq_data, int n){
     return float_data;
 }
 
+bool      msg__analyse_buffer(volatile uint16_t * node_id, volatile ER_Msg * message) {
+    ER_Buffer * channel_buff = &gBufferSerial;
+    // Quit if no changes in buffer
+    if (!channel_buff->buff_is_changed) return false;
+
+    // check RX serial buffer for incoming messages
+    if ((channel_buff->length) > 0) {
+        channel_buff->buff_is_changed = false;
+
+        if (channel_buff->buf[0] != 0x45) { // E
+            // BAD FIRST SIGN
+            buffer__remove_from_buffer (channel_buff, 1);
+            return false;
+        }
+
+        if ( channel_buff->length > 1 && channel_buff->buf[1] != 0x52) { // R
+            // BAD SECOND SIGN
+            buffer__remove_from_buffer (channel_buff, 1);
+            return false;
+        }
+
+        // FIXME - bad package explode TI
+        if ( channel_buff->length > 3 && channel_buff->buf[3] != (* node_id) ) { // node_id is different from destination_id
+            buffer__remove_from_buffer (channel_buff, 1);
+            return false;
+        }
+    }
+
+    if (channel_buff->length >= 8) {
+        uint16_t hcrc;
+
+        msg__set_header(message,  channel_buff->buf[2], channel_buff->buf[3], channel_buff->buf[4], channel_buff->buf[5], channel_buff->buf[6]);
+
+        hcrc = msg__calculate_header_crc(message);
+        if (hcrc == channel_buff->buf[7]) {
+            (* message).header_crc = channel_buff->buf[7]; // set header CRC
+        }
+        else
+        { // header CRC error - skipping 1 byte FIXME - create response with information about issue
+
+            // BAD HEADER CRC
+            buffer__remove_from_buffer (channel_buff, 1);
+            gFlag |= MSG__BAD_HEADER_CRC;
+            return false;
+        }
+
+        if (channel_buff->buf[6] == 0) { // message without no body
+            // remove message from buffer
+            buffer__remove_from_buffer (channel_buff, 8);
+            return true; // Send response
+        }
+
+        if (channel_buff->length >= 2 + 6 + 1 + channel_buff->buf[6]) { // message with body
+            uint16_t bsize = channel_buff->buf[6]; // body size
+            uint16_t mcrc;
+            uint16_t bcrc;
+            msg__set_body(message, (char *) channel_buff->buf + 8 * sizeof(char), bsize);
+
+            mcrc = msg__calculate_body_crc(message); // CRC after recalculation
+            bcrc = channel_buff->buf[8 + bsize]; // CRC in buffer
+
+            if (bcrc == mcrc) {
+                (* message).body_crc = bcrc;
+
+            } else { // inccorect body CRC
+//               (* message).flags |= MSG__BAD_BODY_CRC; // set ERROR flag
+                gFlag |=  MSG__BAD_BODY_CRC;
+            }
+
+            buffer__remove_from_buffer (channel_buff, 8 + bsize + 1);
+            return true;
+        }
+
+    }
+
+    return false;
+}

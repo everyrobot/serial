@@ -70,7 +70,7 @@ extern "C" {
 //! \brief All SpinTAC Components need to be aware of the bounds of this signal.
 //! \brief When the position signal reaches the maximum value it will immediatly go to the minimum value.
 //! \brief The minimum value is the negative of the maximum value.
-#define ST_MREV_ROLLOVER (10.0)
+#define ST_MREV_ROLLOVER (2.0)
 
 //! \brief Defines the maximum value for an Electrical Revolution [ERev]
 //! \brief The position siganl produced by the ENC module is a sawtooth signal
@@ -80,17 +80,17 @@ extern "C" {
 //! \brief Defines the maximum value of error allowable in SpinTAC Position Control, MRev
 //! \breif This value should be the maximum amount of position error that is allowable in your system.
 //! \breif If the position error exceeds this value, SpinTAC Position Control will hold it's output to 0.
-#define ST_POS_ERROR_MAXIMUM_MREV (2.0)
+#define ST_POS_ERROR_MAXIMUM_MREV (1.0)
 
 
 //! \brief SAMPLE TIME
 // **************************************************************************
 //! \brief Defines the number of interrupt ticks per SpinTAC tick
 //! \brief Should be the same as the InstSpin-FOC speed controller clock tick
-#define ISR_TICKS_PER_SPINTAC_TICK (USER_NUM_ISR_TICKS_PER_CTRL_TICK * USER_NUM_CTRL_TICKS_PER_SPEED_TICK)
+#define ISR_TICKS_PER_SPINTAC_TICK (USER_NUM_ISR_TICKS_PER_CTRL_TICK * USER_NUM_CTRL_TICKS_PER_SPEED_TICK) // 1 * 15
 
 //! \brief Defines the SpinTAC execution period, sec
-#define ST_SAMPLE_TIME (ISR_TICKS_PER_SPINTAC_TICK / USER_ISR_FREQ_Hz)
+#define ST_SAMPLE_TIME (ISR_TICKS_PER_SPINTAC_TICK / USER_ISR_FREQ_Hz) // 15 / 15k
 
 
 //! \brief UNIT SCALING
@@ -254,10 +254,6 @@ inline void ST_setupPosConv(ST_Handle handle) {
 	STPOSCONV_setUnitConversion(obj->posConvHandle, USER_IQ_FULL_SCALE_FREQ_Hz, ST_SAMPLE_TIME, USER_MOTOR_NUM_POLE_PAIRS);
 	STPOSCONV_setMRevMaximum_mrev(obj->posConvHandle, _IQ24(ST_MREV_ROLLOVER));
 	STPOSCONV_setLowPassFilterTime_tick(obj->posConvHandle, 3);
-	if(USER_MOTOR_TYPE ==  MOTOR_Type_Induction) {
-		// The Slip Compensator is only needed for ACIM
-		STPOSCONV_setupSlipCompensator(obj->posConvHandle, ST_SAMPLE_TIME, USER_IQ_FULL_SCALE_FREQ_Hz, USER_MOTOR_Rr, USER_MOTOR_Ls_d);
-	}
 	STPOSCONV_setEnable(obj->posConvHandle, true);
 }
 

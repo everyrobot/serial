@@ -216,17 +216,17 @@ interrupt void mainISR(void);
 
 //! \brief The SCI-B receive interrupt service (ISR) routine
 //!
-interrupt void sciBRxISR(void);
+//extern interrupt void serial__isr(void);
 
 
 //! \brief     Updates the global motor variables 
 //! 
-void updateGlobalVariables_motor(CTRL_Handle handle, ST_Handle stHandle);
+//void updateGlobalVariables_motor(CTRL_Handle handle, ST_Handle stHandle);
 
 
 //! \brief     Updates Kp and Ki gains in the controller object
 //!
-void updateKpKiGains(CTRL_Handle handle);
+//void updateKpKiGains(CTRL_Handle handle);
 
 
 

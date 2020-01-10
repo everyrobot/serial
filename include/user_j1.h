@@ -211,12 +211,12 @@ extern "C" {
 #define Maxon_625858                401
 #define Maxon_607942                421 // z enkoderem
 #define Maxon_625859                441
-#define Maxon_64221                 461
+#define Maxon_642221                461
 #define EM7032H                     501
 #define Igus                        521
 #define Gimbal_GBM6208              541
 
-#define USER_MOTOR EM7032H
+#define USER_MOTOR Maxon_625858
 
 #if (USER_MOTOR == Maxon_625858)
 #define USER_MOTOR_TYPE                 MOTOR_Type_Pm
@@ -235,6 +235,24 @@ extern "C" {
 #define USER_MOTOR_MAX_SPEED_KRPM       (4.0)
 #define USER_SYSTEM_INERTIA             (1.06669)
 #define USER_SYSTEM_FRICTION            (3.10652)
+
+#elif (USER_MOTOR == Maxon_607942)
+#define USER_MOTOR_TYPE                 MOTOR_Type_Pm
+#define USER_MOTOR_NUM_POLE_PAIRS       (11)
+#define USER_MOTOR_Rr                   (NULL)
+#define USER_MOTOR_Rs                   (0.12213754653930664)
+#define USER_MOTOR_Ls_d                 (0.0001525040715932846)
+#define USER_MOTOR_Ls_q                 (0.0001525040715932846)
+#define USER_MOTOR_RATED_FLUX           (0.02421591430902481)
+#define USER_MOTOR_MAGNETIZING_CURRENT  (NULL)
+#define USER_MOTOR_RES_EST_CURRENT      (1.0)
+#define USER_MOTOR_IND_EST_CURRENT      (-1.0)
+#define USER_MOTOR_MAX_CURRENT          (10.0)
+#define USER_MOTOR_FLUX_EST_FREQ_Hz     (20.0)
+#define USER_MOTOR_ENCODER_LINES        (4096.0)
+#define USER_MOTOR_MAX_SPEED_KRPM       (1.0)
+#define USER_SYSTEM_INERTIA             (0.44)
+#define USER_SYSTEM_FRICTION            (3.464)
 
 #elif (USER_MOTOR == Gimbal_GBM6208)
 #define USER_MOTOR_TYPE                 MOTOR_Type_Pm
@@ -309,7 +327,7 @@ extern "C" {
 #define USER_SYSTEM_FRICTION            (1.38433)
 
 
-#elif (USER_MOTOR == Maxon_64221)
+#elif (USER_MOTOR == Maxon_642221)
 #define USER_MOTOR_TYPE                 MOTOR_Type_Pm
 #define USER_MOTOR_NUM_POLE_PAIRS       (7)
 #define USER_MOTOR_Rr                   (NULL)
@@ -322,7 +340,7 @@ extern "C" {
 #define USER_MOTOR_IND_EST_CURRENT      (-1.0)
 #define USER_MOTOR_MAX_CURRENT          (10.0)
 #define USER_MOTOR_FLUX_EST_FREQ_Hz     (20.0)
-#define USER_MOTOR_ENCODER_LINES        (2048.0)
+#define USER_MOTOR_ENCODER_LINES        (200.0)
 #define USER_MOTOR_MAX_SPEED_KRPM       (4.0)
 #define USER_SYSTEM_INERTIA             (1.34833)
 #define USER_SYSTEM_FRICTION            (5.20415)

@@ -9,8 +9,8 @@
 #include <er_globals.h>
 #include <er_ti_f28069m_drv8305/er_registers.h>
 #include <er_ti_f28069m_drv8305/er_msg.h>
-#include <er_ti_f28069m_drv8305/er_buffer.h>
-#include <er_serial.h>
+#include <er_bldc.h>
+#include "main_position.h"
 
 // **************************************************************************
 // the defines
@@ -22,10 +22,10 @@
 
 // **************************************************************************
 // the globals
-extern volatile MOTOR_Vars_t      gMotorVars;
-extern volatile ER_Configurations gConfigurationsVars;
-extern volatile ER_Parameters     gParametersVars;
-extern volatile ER_Results        gResultsVars;
+extern volatile MOTOR_Vars_t            gMotorVars;
+extern ER_BLDC_Configurations  gBLDCConfigurationsVars;
+extern ER_BLDC_Parameters      gBLDCParametersVars;
+extern ER_BLDC_Results         gBLDCResultsVars;
 //extern volatile ER_Results        gResultsVars;
 //extern volatile ER_Results        gResultsVars;
 //extern volatile ER_Msg            gMsgCommand;
