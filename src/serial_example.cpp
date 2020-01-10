@@ -1,15 +1,18 @@
+//#include "tr1cpp/serial_example.h"
+//
+//Serial::Serial(ros::NodeHandle &nh, uint16_t source_id, uint16_t node_id, std::string serial_port)
 #include "serial_example/serial_example.h"
-
-namespace er_serial {
 
 Serial::Serial(ros::NodeHandle &nh, uint16_t source_id, uint16_t node_id, std::string serial_port)
     : nh_(nh)
 {
     serial_read_buffer.resize(32);
     ti_read_buffer.resize(13);
+    write_sub = nh_.subscribe("joint_set_pose", 1000, &Serial::set_pose_callback, this);
+    read_pub = nh_.advertise<std_msgs::Float64>("joint_get_pose", 1000);
+    pcb1_sensors_voltage_pub = nh_.advertise<std_msgs::Float64MultiArray>("sensors_voltage", 1000);
     ros_loop(source_id, node_id, serial_port);
-    //write_sub = nh_.subscribe("write_", 1000, &Serial::write_callback, this);
-    //read_pub = nh_.advertise<std_msgs::String>("read", 1000);
+
     //write_pub_str = nh_.advertise<std_msgs::String>("write_", 1000);
 }
 
@@ -64,7 +67,9 @@ int Serial ::serial_write(const std::string &data)
     return no_written_bytes;
 }
 
-void Serial::check_response_type(volatile ER_Msg *_msg)
+void Serial::check_response_type(volatile ER_Msg *_msg,
+                                 std::vector<uint16_t> *serial_read_tactile,
+                                 float *current_pose)
 {
     //ROS_INFO("check_response_type:%d ", (*_msg).register_id);
     switch ((*_msg).register_id) {
@@ -78,21 +83,29 @@ void Serial::check_response_type(volatile ER_Msg *_msg)
     case ER_REG_GET_POSITION: { // Set position setpoint
         if ((*_msg).body_size == 4) {
             current_position = msg__get_float_from_body(&gMsgResponse, 0);
+            *current_pose = current_position;
             ROS_INFO("current position is :%f ", current_position);
+            get_pose_msg.data = current_position;
+            read_pub.publish(get_pose_msg);
         }
 
         break;
     }
     case ER_TACTILE_PCB1_GET_MEDIAN: { // Set position setpoint
         tactile_serial_read.resize(NO_OF_CHANNELS);
+        pcb1_voltages_msg.data.clear();
         int j = 0;
         if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
-            for (int i = 0; i <= (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+            for (int i = 0; i <= (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2) {
                 tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
-            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                serial_read_tactile->at(j++) = tactile_serial_read[j++];
+            }
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++) {
                 ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+                pcb1_voltages_msg.data.push_back(tactile_serial_read.at(i));
+            }
+            pcb1_sensors_voltage_pub.publish(pcb1_voltages_msg);
         }
-
         break;
     }
 
@@ -172,6 +185,439 @@ void Serial::check_response_type(volatile ER_Msg *_msg)
         break;
     }
     default: {}
+    }
+}
+
+void Serial::check_response_type(volatile ER_Msg *_msg, float *current_pose)
+{
+    //ROS_INFO("check_response_type:%d ", (*_msg).register_id);
+    switch ((*_msg).register_id) {
+    case ER_REG_PING:              // PING message
+    case ER_REG_SET_POSITION_SP: { // Set position setpoint
+        if ((*_msg).body_size == 0)
+            ROS_INFO("Position is set ");
+        break;
+    }
+
+    case ER_REG_GET_POSITION: { // Set position setpoint
+        if ((*_msg).body_size == 4) {
+            current_position = msg__get_float_from_body(&gMsgResponse, 0);
+            *current_pose = current_position;
+            ROS_INFO("current position is :%f ", current_position);
+            get_pose_msg.data = current_position;
+            read_pub.publish(get_pose_msg);
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        pcb1_voltages_msg.data.clear();
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i <= (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2) {
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+                //serial_read_tactile->at(j++) = tactile_serial_read[j++];
+            }
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++) {
+                //ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+                pcb1_voltages_msg.data.push_back(tactile_serial_read.at(i));
+            }
+            pcb1_sensors_voltage_pub.publish(pcb1_voltages_msg);
+        }
+        break;
+    }
+
+    case ER_TACTILE_PCB2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+
+    case ER_TACTILE_FINGER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB3_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB4_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_FINGER2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_GRIPPER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0;
+                 i < (NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2);
+                 i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    default: {}
+    }
+}
+
+void Serial::check_response_type(volatile ER_Msg *_msg, std::vector<uint16_t> *serial_read_tactile)
+{
+    //ROS_INFO("check_response_type:%d ", (*_msg).register_id);
+    switch ((*_msg).register_id) {
+    case ER_REG_PING:              // PING message
+    case ER_REG_SET_POSITION_SP: { // Set position setpoint
+        if ((*_msg).body_size == 0)
+            ROS_INFO("Position is set ");
+        break;
+    }
+
+    case ER_REG_GET_POSITION: { // Set position setpoint
+        if ((*_msg).body_size == 4) {
+            current_position = msg__get_float_from_body(&gMsgResponse, 0);
+            //*current_pose = current_position;
+            //ROS_INFO("current position is :%f ", current_position);
+            get_pose_msg.data = current_position;
+            read_pub.publish(get_pose_msg);
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        pcb1_voltages_msg.data.clear();
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i <= (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2) {
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+                //serial_read_tactile->at(j++) = tactile_serial_read[j++];
+            }
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++) {
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+                serial_read_tactile->at(i) = tactile_serial_read.at(i);
+                pcb1_voltages_msg.data.push_back(tactile_serial_read.at(i));
+            }
+            pcb1_sensors_voltage_pub.publish(pcb1_voltages_msg);
+        }
+        break;
+    }
+
+    case ER_TACTILE_PCB2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+
+    case ER_TACTILE_FINGER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB3_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB4_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_FINGER2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_GRIPPER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0;
+                 i < (NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2);
+                 i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    default: {}
+    }
+}
+
+void Serial::check_response_type(volatile ER_Msg *_msg)
+{
+    //ROS_INFO("check_response_type:%d ", (*_msg).register_id);
+    switch ((*_msg).register_id) {
+    case ER_REG_PING:              // PING message
+    case ER_REG_SET_POSITION_SP: { // Set position setpoint
+        if ((*_msg).body_size == 0)
+            ROS_INFO("Position is set ");
+        break;
+    }
+
+    case ER_REG_GET_POSITION: { // Set position setpoint
+        if ((*_msg).body_size == 4) {
+            current_position = msg__get_float_from_body(&gMsgResponse, 0);
+            //*current_pose = current_position;
+            ROS_INFO("current position is :%f ", current_position);
+            get_pose_msg.data = current_position;
+            read_pub.publish(get_pose_msg);
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        pcb1_voltages_msg.data.clear();
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i <= (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2) {
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+                //serial_read_tactile->at(j++) = tactile_serial_read[j++];
+            }
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++) {
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+                pcb1_voltages_msg.data.push_back(tactile_serial_read.at(i));
+            }
+            pcb1_sensors_voltage_pub.publish(pcb1_voltages_msg);
+        }
+        break;
+    }
+
+    case ER_TACTILE_PCB2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+
+    case ER_TACTILE_FINGER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB3_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_PCB4_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_FINGER2_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0; i < (NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2); i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    case ER_TACTILE_GRIPPER1_GET_MEDIAN: { // Set position setpoint
+        tactile_serial_read.resize(NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS);
+        int j = 0;
+        if ((*_msg).body_size == NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t)) {
+            for (int i = 0;
+                 i < (NO_OF_FINGERS * NO_OF_PCBS * NO_OF_CHANNELS * sizeof(uint16_t) - 2);
+                 i = i + 2)
+                tactile_serial_read[j++] = (msg__get_uint16_from_body(&gMsgResponse, i));
+            for (int i = 0; i < (int) tactile_serial_read.size(); i++)
+                ROS_INFO("tactile_serial_read(%d) is :%d", i, tactile_serial_read.at(i));
+        }
+
+        break;
+    }
+    default: {}
+    }
+}
+
+void Serial ::serial_read(std::vector<uint16_t> *tactile_serial_read, float *current_pose)
+{
+    do {
+        no_read_bytes = read(serial_port_fd, &serial_read_buffer[0], 32);
+        //ROS_INFO(" serial_read: no_read_bytes is :%d", no_read_bytes);
+        for (int i = 0; i < no_read_bytes; i += 1) {
+            ti_read_buffer[i] = static_cast<uint16_t>(serial_read_buffer[i]);
+            //ROS_INFO(" serial_read: read_byteis :%d", ti_read_buffer[i]);
+            buffer__add_to_buffer(_RX_SCI_buf,
+                                  &_RX_SCI_ptr,
+                                  &__flag_buffer_rx_is_changed,
+                                  ti_read_buffer[i]);
+        }
+    } while (!buffer__analyse_buffer(_RX_SCI_buf,
+                                     &_RX_SCI_ptr,
+                                     &__flag_buffer_rx_is_changed,
+                                     &_node_id,
+                                     &gMsgResponse));
+
+    if (command__check_msg_flags(&gMsgResponse) == 0
+        && command__check_response_msg(&gMsgResponse) == 0) {
+        check_response_type(&gMsgResponse, tactile_serial_read, current_pose);
+    }
+}
+
+void Serial ::serial_read(float *current_pose)
+{
+    do {
+        no_read_bytes = read(serial_port_fd, &serial_read_buffer[0], 32);
+        //ROS_INFO(" serial_read: no_read_bytes is :%d", no_read_bytes);
+        for (int i = 0; i < no_read_bytes; i += 1) {
+            ti_read_buffer[i] = static_cast<uint16_t>(serial_read_buffer[i]);
+            //ROS_INFO(" serial_read: read_byteis :%d", ti_read_buffer[i]);
+            buffer__add_to_buffer(_RX_SCI_buf,
+                                  &_RX_SCI_ptr,
+                                  &__flag_buffer_rx_is_changed,
+                                  ti_read_buffer[i]);
+        }
+    } while (!buffer__analyse_buffer(_RX_SCI_buf,
+                                     &_RX_SCI_ptr,
+                                     &__flag_buffer_rx_is_changed,
+                                     &_node_id,
+                                     &gMsgResponse));
+
+    if (command__check_msg_flags(&gMsgResponse) == 0
+        && command__check_response_msg(&gMsgResponse) == 0) {
+        check_response_type(&gMsgResponse, current_pose);
+    }
+}
+
+void Serial ::serial_read(std::vector<uint16_t> *tactile_serial_read)
+{
+    do {
+        no_read_bytes = read(serial_port_fd, &serial_read_buffer[0], 32);
+        //ROS_INFO(" serial_read: no_read_bytes is :%d", no_read_bytes);
+        for (int i = 0; i < no_read_bytes; i += 1) {
+            ti_read_buffer[i] = static_cast<uint16_t>(serial_read_buffer[i]);
+            //ROS_INFO(" serial_read: read_byteis :%d", ti_read_buffer[i]);
+            buffer__add_to_buffer(_RX_SCI_buf,
+                                  &_RX_SCI_ptr,
+                                  &__flag_buffer_rx_is_changed,
+                                  ti_read_buffer[i]);
+        }
+    } while (!buffer__analyse_buffer(_RX_SCI_buf,
+                                     &_RX_SCI_ptr,
+                                     &__flag_buffer_rx_is_changed,
+                                     &_node_id,
+                                     &gMsgResponse));
+
+    if (command__check_msg_flags(&gMsgResponse) == 0
+        && command__check_response_msg(&gMsgResponse) == 0) {
+        check_response_type(&gMsgResponse, tactile_serial_read);
     }
 }
 
@@ -378,30 +824,119 @@ std::string Serial::tactile_gripper1_get_median_cmd(uint16_t source_id, uint16_t
 
 void Serial::ros_loop(uint16_t source_id, uint16_t node_id, std::string serial_port)
 {
+    //tactile_force_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_pcb1_median", 1000);
+
+    //array1_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array1_median", 1000);
+    //array2_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array2_median", 1000);
+    //array3_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array3_median", 1000);
+    //array4_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array4_median", 1000);
+    //array5_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array5_median", 1000);
+    //array6_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array6_median", 1000);
+    //array7_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array7_median", 1000);
+    //array8_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array8_median", 1000);
+    //array9_pub = nh_.advertise<geometry_msgs::WrenchStamped>("tactile_array9_median", 1000);
+
+    //geometry_msgs::WrenchStamped pcb1_msg;
+
+    //geometry_msgs::WrenchStamped array1_msg;
+    //geometry_msgs::WrenchStamped array2_msg;
+    //geometry_msgs::WrenchStamped array3_msg;
+    //geometry_msgs::WrenchStamped array4_msg;
+    //geometry_msgs::WrenchStamped array5_msg;
+    //geometry_msgs::WrenchStamped array6_msg;
+    //geometry_msgs::WrenchStamped array7_msg;
+    //geometry_msgs::WrenchStamped array8_msg;
+    //geometry_msgs::WrenchStamped array9_msg;
+
+    //pcb1_msg.header.frame_id = "/map";
+
+    //array1_msg.header.frame_id = "/map";
+    //array2_msg.header.frame_id = "/map";
+    //array3_msg.header.frame_id = "/map";
+    //array4_msg.header.frame_id = "/map";
+    //array5_msg.header.frame_id = "/map";
+    //array6_msg.header.frame_id = "/map";
+    //array7_msg.header.frame_id = "/map";
+    //array8_msg.header.frame_id = "/map";
+    //array9_msg.header.frame_id = "/map";
+
+    //uint8_t pcb_visual_downscale_factor = 35;
+    //uint8_t array_downscale_factor = 5;
     ros::Rate loop_rate(100);
     if (serial_init(serial_port)) {
         while (ros::ok()) {
             serial_write(get_pos_cmd(source_id, node_id));
             serial_read();
+
             serial_write(tactile_pcb1_get_median_cmd(source_id, node_id));
             serial_read();
 
-            serial_write(tactile_pcb2_get_median_cmd(source_id, node_id));
-            serial_read();
-            serial_write(tactile_pcb3_get_median_cmd(source_id, node_id));
-            serial_read();
-            serial_write(tactile_pcb4_get_median_cmd(source_id, node_id));
-            serial_read();
-            serial_write(tactile_finger1_get_median_cmd(source_id, node_id));
-            serial_read();
-            serial_write(tactile_finger2_get_median_cmd(source_id, node_id));
-            serial_read();
-            serial_write(tactile_gripper1_get_median_cmd(source_id, node_id));
-            serial_read();
+            //pcb1_msg.header.stamp = ros::Time::now();
 
-            serial_write(set_pos_cmd(source_id, node_id, desired_pose));
-            serial_read();
-            desired_pose += 0.05;
+            //array1_msg.header.stamp = ros::Time::now();
+            //array2_msg.header.stamp = ros::Time::now();
+            //array3_msg.header.stamp = ros::Time::now();
+            //array4_msg.header.stamp = ros::Time::now();
+            //array5_msg.header.stamp = ros::Time::now();
+            //array6_msg.header.stamp = ros::Time::now();
+            //array7_msg.header.stamp = ros::Time::now();
+            //array8_msg.header.stamp = ros::Time::now();
+            //array9_msg.header.stamp = ros::Time::now();
+
+            //pcb1_msg.wrench.force.z = 0;
+
+            //array1_msg.wrench.force.z = 0;
+            //array2_msg.wrench.force.z = 0;
+            //array3_msg.wrench.force.z = 0;
+            //array4_msg.wrench.force.z = 0;
+            //array5_msg.wrench.force.z = 0;
+            //array6_msg.wrench.force.z = 0;
+            //array7_msg.wrench.force.z = 0;
+            //array8_msg.wrench.force.z = 0;
+            //array9_msg.wrench.force.z = 0;
+
+            //for (int i = 0; i < NO_OF_CHANNELS; i++)
+            // pcb1_msg.wrench.force.z += tactile_serial_read[i] / pcb_visual_downscale_factor;
+
+            //array1_msg.wrench.force.z += tactile_serial_read[0] / array_downscale_factor;
+            //array2_msg.wrench.force.z += tactile_serial_read[1] / array_downscale_factor;
+            //array3_msg.wrench.force.z += tactile_serial_read[2] / array_downscale_factor;
+            //array4_msg.wrench.force.z += tactile_serial_read[3] / array_downscale_factor;
+            //array5_msg.wrench.force.z += tactile_serial_read[4] / array_downscale_factor;
+            //array6_msg.wrench.force.z += tactile_serial_read[5] / array_downscale_factor;
+            //array7_msg.wrench.force.z += tactile_serial_read[6] / array_downscale_factor;
+            //array8_msg.wrench.force.z += tactile_serial_read[7] / array_downscale_factor;
+            //array9_msg.wrench.force.z += tactile_serial_read[8] / array_downscale_factor;
+
+            //tactile_force_pub.publish(pcb1_msg);
+
+            //array1_pub.publish(array1_msg);
+            //array2_pub.publish(array2_msg);
+            //array3_pub.publish(array3_msg);
+            //array4_pub.publish(array4_msg);
+            //array5_pub.publish(array5_msg);
+            //array6_pub.publish(array6_msg);
+            //array7_pub.publish(array7_msg);
+            //array8_pub.publish(array8_msg);
+            //array9_pub.publish(array9_msg);
+
+            //serial_write(tactile_pcb2_get_median_cmd(source_id, node_id));
+            //serial_read();
+            //serial_write(tactile_pcb3_get_median_cmd(source_id, node_id));
+            //serial_read();
+            //serial_write(tactile_pcb4_get_median_cmd(source_id, node_id));
+            //serial_read();
+            //serial_write(tactile_finger1_get_median_cmd(source_id, node_id));
+            //serial_read();
+            //serial_write(tactile_finger2_get_median_cmd(source_id, node_id));
+            //serial_read();
+            //serial_write(tactile_gripper1_get_median_cmd(source_id, node_id));
+            //serial_read();
+            //
+            //serial_write(set_pos_cmd(1, 100, desired_pose));
+            //serial_read();
+            //desired_pose += 0.05;
+
             //if (desired_pose > 120.0)
             //desired_pose = 0.0;
             ros::Duration(0.005).sleep();
@@ -422,6 +957,18 @@ std::string Serial::hexStr(unsigned char *data, int len)
     return s;
 }
 
-void Serial::write_callback(const std_msgs::String::ConstPtr &msg) {}
+void Serial::set_pose_callback(const std_msgs::Float64::ConstPtr &msg)
+{
+    //desired_pose = msg->data;
+    //serial_write(set_pos_cmd(1, 100, desired_pose));
+    //serial_read();
+    //desired_pose += 0.05;
+}
 
-} // namespace er_serial
+//void Serial::get_pose_callback(const std_msgs::Float64::ConstPtr &msg)
+//{
+//    double request = msg->data;
+//    serial_write(get_pos_cmd(1, 100));
+//    serial_read();
+//    //desired_pose += 0.05;
+//}
