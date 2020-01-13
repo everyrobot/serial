@@ -12,9 +12,13 @@ ROS side:
 
 HW interface:
     1. Download serial-ros from here at master branch https://github.com/everyrobot/serial-ros
+    
     2. Download er_ti_f28069m_drv8305 at er_drv_ros branch https://github.com/everyrobot/serial-ros/tree/er_drv_ros
+    
     3. Download rrbot_description from https://github.com/everyrobot/gazebo_ros_demos.git
+    
     4. Download at er_dev branch https://github.com/everyrobot/ros_control_boilerplate.git
+    
     5. compile and roslaunch ros_control_boilerplate rrbot_hardware.launch
 
 RVIZ:
