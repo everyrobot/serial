@@ -12,11 +12,11 @@ ROS side:
 
 HW interface:
 
-    1. Download serial-ros from here at master branch https://github.com/everyrobot/serial-ros
+    1. Download serial-ros from here at master branch git clone https://github.com/everyrobot/serial-ros
     
     2. Download er_ti_f28069m_drv8305 at er_drv_ros branch git clone --branch er_drv_ros https://github.com/everyrobot/serial-ros/tree/er_drv_ros
     
-    3. Download rrbot_description from https://github.com/everyrobot/gazebo_ros_demos.git
+    3. Download rrbot_description from git clone https://github.com/everyrobot/gazebo_ros_demos.git
     
     4. Download at er_dev branch git clone --branch er_dev https://github.com/everyrobot/ros_control_boilerplate.git
     
