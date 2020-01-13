@@ -11,6 +11,7 @@ ROS side:
 
 
 HW interface:
+
     1. Download serial-ros from here at master branch https://github.com/everyrobot/serial-ros
     
     2. Download er_ti_f28069m_drv8305 at er_drv_ros branch https://github.com/everyrobot/serial-ros/tree/er_drv_ros
