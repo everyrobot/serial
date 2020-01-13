@@ -11,7 +11,7 @@ Serial::Serial(ros::NodeHandle &nh, uint16_t source_id, uint16_t node_id, std::s
     write_sub = nh_.subscribe("joint_set_pose", 1000, &Serial::set_pose_callback, this);
     read_pub = nh_.advertise<std_msgs::Float64>("joint_get_pose", 1000);
     pcb1_sensors_voltage_pub = nh_.advertise<std_msgs::Float64MultiArray>("sensors_voltage", 1000);
-    ros_loop(source_id, node_id, serial_port);
+    //ros_loop(source_id, node_id, serial_port);
 
     //write_pub_str = nh_.advertise<std_msgs::String>("write_", 1000);
 }
@@ -933,9 +933,9 @@ void Serial::ros_loop(uint16_t source_id, uint16_t node_id, std::string serial_p
             //serial_write(tactile_gripper1_get_median_cmd(source_id, node_id));
             //serial_read();
             //
-            //serial_write(set_pos_cmd(1, 100, desired_pose));
-            //serial_read();
-            //desired_pose += 0.05;
+            serial_write(set_pos_cmd(1, 100, desired_pose));
+            serial_read();
+            desired_pose += 0.05;
 
             //if (desired_pose > 120.0)
             //desired_pose = 0.0;

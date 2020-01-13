@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 
     uint16_t source_id = 1;
     uint16_t node_id = 100;
-    std::string serial_port = "/dev/ttyUSB3";
+    std::string serial_port = "/dev/ttyUSB0";
 
     Serial serial(nh, source_id, node_id, serial_port);
     //ros::waitForShutdown();
